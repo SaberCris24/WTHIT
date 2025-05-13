@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Plantilla (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Plantilla (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

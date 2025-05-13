@@ -1,0 +1,43 @@
+<Window
+    x:Class="Plantilla.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Plantilla"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Plantilla">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Grid Grid.Row="0" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12">
+
+            <!-- Margen = izq, arriba, derecha, abj.-->
+
+            <TextBlock
+                x:Name="TitleTextBlock"
+                Text="What The Hell Is This?"
+                FontSize="32"
+                FontWeight="Bold"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="170,20,0,0"/>
+
+                <AutoSuggestBox 
+                x:Name="SearchBox"
+                PlaceholderText="Search for processes"
+                QueryIcon="Find"
+                Width="300"
+                HorizontalAlignment="Right"
+                Margin="0,40,20,0"
+                QuerySubmitted="SearchBox_QuerySubmitted"
+                TextChanged="SearchBox_TextChanged"
+                SuggestionChosen="SearchBox_SuggestionChosen">
+            </AutoSuggestBox>
+        </Grid>
+    </Grid>
+</Window>

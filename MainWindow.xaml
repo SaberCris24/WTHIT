@@ -14,18 +14,18 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <Grid Grid.Row="0" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12">
+        <Grid Grid.Row="0" Padding="12">
 
             <!-- Margen = izq, arriba, derecha, abj.-->
 
             <TextBlock
                 x:Name="TitleTextBlock"
                 Text="What The Hell Is This?"
-                FontSize="32"
+                FontSize="40"
                 FontWeight="Bold"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Margin="170,20,0,0"/>
+                Margin="180,25,0,0"/>
 
                 <AutoSuggestBox 
                 x:Name="SearchBox"
@@ -33,11 +33,13 @@
                 QueryIcon="Find"
                 Width="300"
                 HorizontalAlignment="Right"
-                Margin="0,40,20,0"
+                Margin="0,60,60,0"
                 QuerySubmitted="SearchBox_QuerySubmitted"
                 TextChanged="SearchBox_TextChanged"
                 SuggestionChosen="SearchBox_SuggestionChosen">
-            </AutoSuggestBox>
+            </AutoSuggestBox>   
+            
+            
         </Grid>
     </Grid>
 </Window>

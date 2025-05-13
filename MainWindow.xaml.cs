@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -28,6 +29,23 @@ namespace Plantilla
         public MainWindow()
         {
             this.InitializeComponent();
+
+            AppWindow.Title = "This is a title";
+
+            // Set the window size (including borders)
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 500));
+
+            // Set the window position on screen
+            AppWindow.Move(new Windows.Graphics.PointInt32(50, 50));
+
+            // Set the preferred theme for the title bar
+            AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
+
+            // Set the taskbar icon (displayed in the taskbar)
+            AppWindow.SetTaskbarIcon("Assets/Tiles/GalleryIcon.ico");
+
+            // Set the title bar icon (displayed in the window's title bar)
+            AppWindow.SetTitleBarIcon("Assets/Tiles/GalleryIcon.ico");
             
             sugerencias = new List<string>
             {

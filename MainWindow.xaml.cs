@@ -30,7 +30,7 @@ namespace Plantilla
         {
             this.InitializeComponent();
 
-            AppWindow.Title = "This is a title";
+            AppWindow.Title = "WTHIT";
 
             // Set the window size (including borders)
             AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 500));

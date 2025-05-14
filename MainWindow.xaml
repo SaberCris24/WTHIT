@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
         
         <Grid Grid.Row="0" Padding="12">
-            
+
             <!-- Margen = izq, arriba, derecha, abj.-->
             <TextBlock
                 x:Name="TitleTextBlock"
@@ -37,7 +37,7 @@
                 QueryIcon="Find"
                 Width="300"
                 HorizontalAlignment="Right"
-                Margin="0,60,60,0"
+                Margin="0,60,25,0"
                 QuerySubmitted="SearchBox_QuerySubmitted"
                 TextChanged="SearchBox_TextChanged"
                 SuggestionChosen="SearchBox_SuggestionChosen">

@@ -16,12 +16,12 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
         <Grid Grid.Row="0" Padding="12">
-
+            
             <!-- Margen = izq, arriba, derecha, abj.-->
-
             <TextBlock
                 x:Name="TitleTextBlock"
                 Text="What The Hell Is This?"
@@ -31,7 +31,7 @@
                 VerticalAlignment="Top"
                 Margin="180,25,0,0"/>
 
-                <AutoSuggestBox 
+            <AutoSuggestBox 
                 x:Name="SearchBox"
                 PlaceholderText="Search for processes"
                 QueryIcon="Find"
@@ -42,8 +42,31 @@
                 TextChanged="SearchBox_TextChanged"
                 SuggestionChosen="SearchBox_SuggestionChosen">
             </AutoSuggestBox>   
-            
-            
         </Grid>
+        
+        <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20,20,0,0">
+        </StackPanel>
+        
+        <!-- Botón About en la esquina inferior izquierda -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="20,0,0,20">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
+                <Button x:Name="AboutButton"
+                        Click="AboutButton_Click"
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        CornerRadius="20"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center">
+                     <FontIcon
+                        Glyph="&#xE946;"
+                        FontSize="16"/>
+                </Button>
+                <TextBlock Text="About"
+                    HorizontalAlignment="Center"
+                    Margin="0,5,0,0"
+                    FontSize="12"/>
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Window>

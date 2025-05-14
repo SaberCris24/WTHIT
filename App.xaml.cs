@@ -15,6 +15,7 @@ using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using DevWinUI;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -30,6 +31,9 @@ namespace Plantilla
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
+        
+            public IThemeService ThemeService { get; set; }
+
         public App()
         {
             this.InitializeComponent();
@@ -42,9 +46,17 @@ namespace Plantilla
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             m_window = new MainWindow(1000, 400);
+            m_window.ExtendsContentIntoTitleBar = true;
             m_window.Activate();
+
+            ThemeService = new ThemeService();
+            ThemeService.Initialize(m_window).EnableRequestedTheme();
+
         }
 
         private Window? m_window;
     }
+
+    
+    
 }

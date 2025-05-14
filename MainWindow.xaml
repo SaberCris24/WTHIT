@@ -41,7 +41,19 @@
                 QuerySubmitted="SearchBox_QuerySubmitted"
                 TextChanged="SearchBox_TextChanged"
                 SuggestionChosen="SearchBox_SuggestionChosen">
-            </AutoSuggestBox>   
+            </AutoSuggestBox>
+
+                    <ComboBox Name="cmbTheme"
+                        SelectionChanged="cmbTheme_SelectionChanged">
+                <ComboBoxItem Content="Light"
+                                Tag="Light" />
+                <ComboBoxItem Content="Dark"
+                                Tag="Dark" />
+                <ComboBoxItem Content="Default"
+                                Tag="Default" />
+            </ComboBox>
+
+
         </Grid>
         
         <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20,20,0,0">

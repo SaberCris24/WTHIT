@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
+using DevWinUI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -32,6 +33,7 @@ namespace Plantilla
         public MainWindow(int MinWidth, int MinHeight)
         {
             this.InitializeComponent();
+            this.ExtendsContentIntoTitleBar = true;
 
             AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
 
@@ -65,6 +67,16 @@ namespace Plantilla
                 "notepad.exe",
             };
         }
+
+         private void OnThemeRadioButtonChecked(object sender, RoutedEventArgs e)
+            {
+                ((App)Application.Current).ThemeService.OnThemeRadioButtonChecked(sender);
+            }
+
+            private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
+            {
+                ((App)Application.Current).ThemeService.OnThemeComboBoxSelectionChanged(sender);
+            }
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
         {
@@ -121,9 +133,6 @@ namespace Plantilla
 
             hyperlink.Inlines.Add(linkRun);
             
-            // hyperlink.Click += Hyperlink_Click;
-            // esto lanzaba el enlace 2 veces chino mk
-
             linkText.Inlines.Add(hyperlink);
 
             contentPanel.Children.Add(linkText);
@@ -133,6 +142,7 @@ namespace Plantilla
                 Title = "About",
                 Content = contentPanel,
                 CloseButtonText = "Close",
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 XamlRoot = this.Content.XamlRoot
             };
 

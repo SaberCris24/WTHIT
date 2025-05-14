@@ -144,7 +144,8 @@ namespace Plantilla
 
             hyperlink.Inlines.Add(linkRun);
             
-            hyperlink.Click += Hyperlink_Click;
+            // hyperlink.Click += Hyperlink_Click;
+            // esto lanzaba el enlace 2 veces chino mk
 
             linkText.Inlines.Add(hyperlink);
 

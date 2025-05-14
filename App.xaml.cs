@@ -41,7 +41,7 @@ namespace Plantilla
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow();
+            m_window = new MainWindow(1000, 400);
             m_window.Activate();
         }
 

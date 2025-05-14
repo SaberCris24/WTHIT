@@ -16,12 +16,10 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
+        <!-- Encabezado -->
         <Grid Grid.Row="0" Padding="12">
-
-            <!-- Margen = izq, arriba, derecha, abj.-->
             <TextBlock
                 x:Name="TitleTextBlock"
                 Text="What The Hell Is This?"
@@ -44,11 +42,111 @@
             </AutoSuggestBox>   
         </Grid>
         
-        <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20,20,0,0">
-        </StackPanel>
-        
-        <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" Margin="20,0,0,20" Spacing="12">
+        <!-- Lista de Procesos -->
+        <Border Grid.Row="1" 
+                Margin="80,0,20,20"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+            
+            <!-- Encabezados de columnas -->
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
+                <!-- Headers -->
+                <Grid Grid.Row="0" 
+                      Padding="16,12"
+                      Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="0.8*"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Process Name" 
+                             Grid.Column="0" 
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Process ID" 
+                             Grid.Column="1" 
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Application Related" 
+                             Grid.Column="2" 
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Virus Or Not" 
+                             Grid.Column="3" 
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Information" 
+                             Grid.Column="4" 
+                             FontWeight="SemiBold"/>
+                </Grid>
+
+                <!-- Lista de procesos -->
+                <ListView x:Name="ProcessListView"
+                         Grid.Row="1"
+                         Margin="4"
+                         SelectionMode="Single"
+                         IsItemClickEnabled="True">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Margin" Value="4"/>
+                            <Setter Property="Padding" Value="12"/>
+                            <Setter Property="CornerRadius" Value="4"/>
+                            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="0.8*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" 
+                                         Text="{Binding ProcessName}"
+                                         VerticalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Column="1" 
+                                         Text="{Binding ProcessId}"
+                                         VerticalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Column="2" 
+                                         Text="{Binding ApplicationRelated}"
+                                         VerticalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Column="3" 
+                                         Text="{Binding VirusStatus}"
+                                         VerticalAlignment="Center"/>
+                                
+                                <Button Grid.Column="4" 
+                                        Content="View Details"
+                                        Click="ViewDetails_Click"
+                                        CornerRadius="4"
+                                        Padding="8,4"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Border>
+
+        <!-- Panel inferior con botones -->
+        <StackPanel Grid.Row="1" 
+                    Orientation="Vertical" 
+                    HorizontalAlignment="Left" 
+                    VerticalAlignment="Bottom"
+                    Margin="20,0,0,20" 
+                    Spacing="12">
             <!-- Botón de configuración -->
             <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
                 <Button x:Name="SettingsButton"
@@ -69,7 +167,7 @@
                     FontSize="12"/>
             </StackPanel>
 
-        <!-- Botón About en la esquina inferior izquierda -->
+            <!-- Botón About -->
             <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
                 <Button x:Name="AboutButton"
                         Click="AboutButton_Click"

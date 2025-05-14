@@ -28,6 +28,8 @@ namespace Plantilla
    public sealed partial class MainWindow : Window
     {
         private List<string> sugerencias = new List<string>();
+        private Frame rootFrame;
+        private Grid? mainGrid;
 
         public MainWindow(int MinWidth, int MinHeight)
         {
@@ -38,7 +40,7 @@ namespace Plantilla
             AppWindow.Title = "WTHIT";
 
             // Set the window size (including borders)
-            AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 800));
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
 
             // Set the window position on screen
             AppWindow.Move(new Windows.Graphics.PointInt32(50, 50));
@@ -64,6 +66,27 @@ namespace Plantilla
                 "msedge.exe",
                 "notepad.exe",
             };
+            
+            // Guardar referencia a la cuadrícula principal
+            mainGrid = this.Content as Grid;
+            
+            // Crear el Frame para la navegación
+            rootFrame = new Frame();
+        }
+        
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Reemplazar la cuadrícula principal con el frame
+            this.Content = rootFrame;
+            
+            // Navegar a la página de settings
+            rootFrame.Navigate(typeof(SettingsPage), this);
+        }
+
+        // Método para volver a la interfaz principal
+        public void ReturnToMainInterface()
+        {
+            this.Content = mainGrid;
         }
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
@@ -92,7 +115,7 @@ namespace Plantilla
         {
             sender.Text = args.SelectedItem.ToString();
         }
-
+        
         private void AboutButton_Click(object sender, RoutedEventArgs e)
         {
             StackPanel contentPanel = new StackPanel();
@@ -116,7 +139,7 @@ namespace Plantilla
 
             Run linkRun = new Run
             {
-                Text = "GitHub: https://github.com/SaberCris24/WTHIT"
+                Text = "GitHub Repository"
             };
 
             hyperlink.Inlines.Add(linkRun);
@@ -141,7 +164,6 @@ namespace Plantilla
         // Método para el click del hyperlink
         private async void Hyperlink_Click(Hyperlink sender, HyperlinkClickEventArgs args)
         {
-
             if (sender.NavigateUri != null)
             {
                await Windows.System.Launcher.LaunchUriAsync(sender.NavigateUri);

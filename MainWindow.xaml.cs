@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Graphics;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -26,14 +27,16 @@ namespace Plantilla
     {
         private List<string> sugerencias = new List<string>();
 
-        public MainWindow()
+        public MainWindow(int MinWidth, int MinHeight)
         {
             this.InitializeComponent();
+
+            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
 
             AppWindow.Title = "WTHIT";
 
             // Set the window size (including borders)
-            AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 500));
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 800));
 
             // Set the window position on screen
             AppWindow.Move(new Windows.Graphics.PointInt32(50, 50));
@@ -46,7 +49,13 @@ namespace Plantilla
 
             // Set the title bar icon (displayed in the window's title bar)
             AppWindow.SetTitleBarIcon("Assets/Tiles/GalleryIcon.ico");
-            
+
+            OverlappedPresenter presenter = OverlappedPresenter.Create();
+            presenter.PreferredMinimumWidth = MinWidth;
+            presenter.PreferredMinimumHeight = MinHeight;
+
+            AppWindow.SetPresenter(presenter);
+
             sugerencias = new List<string>
             {
                 "explorer.exe",

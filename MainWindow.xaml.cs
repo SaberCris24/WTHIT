@@ -252,10 +252,7 @@ namespace Plantilla
             };
 
             hyperlink.Inlines.Add(linkRun);
-<<<<<<< HEAD
             
-=======
->>>>>>> 8a0435bdd5f56119074a0e03ef528013bc89a41e
             linkText.Inlines.Add(hyperlink);
             contentPanel.Children.Add(linkText);
 

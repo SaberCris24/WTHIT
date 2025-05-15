@@ -8,10 +8,6 @@
     mc:Ignorable="d"
     Title="Plantilla">
 
-    <Window.SystemBackdrop>
-        <MicaBackdrop />
-    </Window.SystemBackdrop>
-
     <NavigationView x:Name="NavView"
                     PaneDisplayMode="LeftCompact"
                     IsBackButtonVisible="Collapsed"
@@ -48,6 +44,17 @@
         </NavigationView.FooterMenuItems>
 
         <Grid>
+
+                    <ComboBox Name="cmbTheme"
+                        SelectionChanged="cmbTheme_SelectionChanged">
+                                <ComboBoxItem Content="Light"
+                                Tag="Light" />
+                                <ComboBoxItem Content="Dark"
+                                Tag="Dark" />
+                                <ComboBoxItem Content="Default"
+                                Tag="Default" />
+                        </ComboBox>
+
             <Frame x:Name="contentFrame">
                 <Frame.Content>
                     <!-- Contenido principal (vista de procesos) -->

@@ -30,13 +30,11 @@ namespace Plantilla
             this.InitializeComponent();
             this.ExtendsContentIntoTitleBar = true;
 
-            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
             AppWindow.Title = "WTHIT";
-            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
-            AppWindow.Move(new Windows.Graphics.PointInt32(50, 50));
-            AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
-            AppWindow.SetTaskbarIcon("Assets/Tiles/GalleryIcon.ico");
-            AppWindow.SetTitleBarIcon("Assets/Tiles/GalleryIcon.ico");
+            AppWindow.SetTaskbarIcon("Assets/icon.png");
+            AppWindow.SetTitleBarIcon("Assets/icon.png");
+
+           // ((App)Application.Current).ThemeService.SetThemeComboBoxDefaultItem(cmbTheme);
 
             OverlappedPresenter presenter = OverlappedPresenter.Create();
             presenter.PreferredMinimumWidth = MinWidth;
@@ -45,6 +43,15 @@ namespace Plantilla
             
             allProcesses = new List<ProcessItem>();
             LoadProcesses();
+        }
+        private void OnThemeRadioButtonChecked(object sender, RoutedEventArgs e)
+        {
+            ((App)Application.Current).ThemeService.OnThemeRadioButtonChecked(sender);
+        }
+
+        private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ((App)Application.Current).ThemeService.OnThemeComboBoxSelectionChanged(sender);
         }
 
         private void ShowSettings()
@@ -136,6 +143,7 @@ namespace Plantilla
                 Title = "Process Details",
                 Content = detailsPanel,
                 CloseButtonText = "Close",
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 XamlRoot = this.Content.XamlRoot
             };
 
@@ -149,18 +157,20 @@ namespace Plantilla
                 Title = "Error",
                 Content = message,
                 CloseButtonText = "OK",
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 XamlRoot = this.Content.XamlRoot
             };
 
             await dialog.ShowAsync();
         }
 
+
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
             if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
                 string searchText = sender.Text.ToLower();
-                
+
                 // Filtrar procesos que coincidan con el texto de búsqueda
                 var filteredProcesses = allProcesses
                     .Where(p => p.ProcessName.ToLower().StartsWith(searchText))
@@ -223,7 +233,7 @@ namespace Plantilla
                         ShowAbout();
                         break;
                     case "processes":
-                        // Ya estamos en la vista de procesos
+
                         break;
                 }
             }

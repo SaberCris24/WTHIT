@@ -121,7 +121,7 @@
                                     <Button Grid.Column="1" 
                                         Content="Process Id"
                                         Click="OrderBy_Id"
-                                        CornerRadius="0"
+                                        CornerRadius="4"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderBrush="Transparent"/>

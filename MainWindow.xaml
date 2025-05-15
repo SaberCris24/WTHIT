@@ -80,9 +80,13 @@
                     <TextBlock Text="Process Name" 
                              Grid.Column="0" 
                              FontWeight="SemiBold"/>
-                    <TextBlock Text="Process ID" 
-                             Grid.Column="1" 
-                             FontWeight="SemiBold"/>
+                    <Button Grid.Column="1" 
+                            Content="Process Id"
+                            Click="OrderBy_Id"
+                            CornerRadius="0"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"/>
                     <TextBlock Text="Application Related" 
                              Grid.Column="2" 
                              FontWeight="SemiBold"/>

@@ -62,6 +62,7 @@ namespace Plantilla
                         VirusStatus = "Scanning...",
                         Information = "Click for details"
                     })
+                    .OrderBy(p => p.ProcessName)
                     .ToList();
 
                 ProcessListView.ItemsSource = allProcesses;
@@ -101,30 +102,54 @@ namespace Plantilla
             }
         }
 
+        private void OrderBy_Id(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                allProcesses = Process.GetProcesses()
+                    .Select(p => new ProcessItem
+                    {
+                        ProcessName = p.ProcessName,
+                        ProcessId = p.Id,
+                        ApplicationRelated = DetermineApplicationRelation(p.ProcessName),
+                        VirusStatus = "Scanning...",
+                        Information = "Click for details"
+                    })
+                    .OrderBy(p => p.ProcessId)
+                    .ToList();
+
+                ProcessListView.ItemsSource = allProcesses;
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Error loading processes: {ex.Message}");
+            }
+        }
+
         private async void ShowProcessDetails(ProcessItem process)
         {
             var detailsPanel = new StackPanel { Spacing = 10 };
-            
-            detailsPanel.Children.Add(new TextBlock 
-            { 
+
+            detailsPanel.Children.Add(new TextBlock
+            {
                 Text = $"Process Name: {process.ProcessName}",
                 TextWrapping = TextWrapping.Wrap
             });
-            
-            detailsPanel.Children.Add(new TextBlock 
-            { 
+
+            detailsPanel.Children.Add(new TextBlock
+            {
                 Text = $"Process ID: {process.ProcessId}",
                 TextWrapping = TextWrapping.Wrap
             });
-            
-            detailsPanel.Children.Add(new TextBlock 
-            { 
+
+            detailsPanel.Children.Add(new TextBlock
+            {
                 Text = $"Application: {process.ApplicationRelated}",
                 TextWrapping = TextWrapping.Wrap
             });
-            
-            detailsPanel.Children.Add(new TextBlock 
-            { 
+
+            detailsPanel.Children.Add(new TextBlock
+            {
                 Text = $"Security Status: {process.VirusStatus}",
                 TextWrapping = TextWrapping.Wrap
             });

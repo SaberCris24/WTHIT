@@ -32,7 +32,7 @@ namespace Plantilla
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
         
-            public IThemeService ThemeService { get; set; }
+        public IThemeService ThemeService { get; set; }
 
         public App()
         {
@@ -50,7 +50,8 @@ namespace Plantilla
             m_window.Activate();
 
             ThemeService = new ThemeService();
-            ThemeService.Initialize(m_window).EnableRequestedTheme();
+            ThemeService.Initialize(m_window).ConfigureElementTheme(ElementTheme.Default);
+            ThemeService.ConfigureBackdrop(BackdropType.Mica);
 
         }
 

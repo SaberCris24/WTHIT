@@ -32,19 +32,17 @@ namespace Plantilla
             this.InitializeComponent();
             this.ExtendsContentIntoTitleBar = true;
 
-            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
             AppWindow.Title = "WTHIT";
-            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
-            AppWindow.Move(new Windows.Graphics.PointInt32(50, 50));
-            AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
-            AppWindow.SetTaskbarIcon("Assets/Tiles/GalleryIcon.ico");
-            AppWindow.SetTitleBarIcon("Assets/Tiles/GalleryIcon.ico");
+            AppWindow.SetTaskbarIcon("Assets/icon.png");
+            AppWindow.SetTitleBarIcon("Assets/icon.png");
+
+           // ((App)Application.Current).ThemeService.SetThemeComboBoxDefaultItem(cmbTheme);
 
             OverlappedPresenter presenter = OverlappedPresenter.Create();
             presenter.PreferredMinimumWidth = MinWidth;
             presenter.PreferredMinimumHeight = MinHeight;
             AppWindow.SetPresenter(presenter);
-            
+
             mainGrid = this.Content as Grid;
             rootFrame = new Frame();
             allProcesses = new List<ProcessItem>();
@@ -136,6 +134,7 @@ namespace Plantilla
                 Title = "Process Details",
                 Content = detailsPanel,
                 CloseButtonText = "Close",
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 XamlRoot = this.Content.XamlRoot
             };
 
@@ -149,6 +148,7 @@ namespace Plantilla
                 Title = "Error",
                 Content = message,
                 CloseButtonText = "OK",
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 XamlRoot = this.Content.XamlRoot
             };
 
@@ -181,7 +181,7 @@ namespace Plantilla
             if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
                 string searchText = sender.Text.ToLower();
-                
+
                 // Filtrar procesos que coincidan con el texto de búsqueda
                 var filteredProcesses = allProcesses
                     .Where(p => p.ProcessName.ToLower().StartsWith(searchText))

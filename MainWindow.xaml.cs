@@ -24,6 +24,9 @@ namespace Plantilla
     public sealed partial class MainWindow : Window
     {
         private List<ProcessItem> allProcesses;
+        
+        private bool isSortedAscending = true;
+
 
         public MainWindow(int MinWidth, int MinHeight)
         {
@@ -34,13 +37,13 @@ namespace Plantilla
             AppWindow.SetTaskbarIcon("Assets/icon.png");
             AppWindow.SetTitleBarIcon("Assets/icon.png");
 
-           // ((App)Application.Current).ThemeService.SetThemeComboBoxDefaultItem(cmbTheme);
+            // ((App)Application.Current).ThemeService.SetThemeComboBoxDefaultItem(cmbTheme);
 
             OverlappedPresenter presenter = OverlappedPresenter.Create();
             presenter.PreferredMinimumWidth = MinWidth;
             presenter.PreferredMinimumHeight = MinHeight;
             AppWindow.SetPresenter(presenter);
-            
+
             allProcesses = new List<ProcessItem>();
             LoadProcesses();
         }
@@ -71,8 +74,11 @@ namespace Plantilla
                         VirusStatus = "Scanning...",
                         Information = "Click for details"
                     })
-                    .OrderBy(p => p.ProcessName)
                     .ToList();
+
+                    allProcesses = isSortedAscending
+                    ? allProcesses.OrderBy(p => p.ProcessName).ToList()
+                    : allProcesses.OrderByDescending(p => p.ProcessName).ToList();
 
                 ProcessListView.ItemsSource = allProcesses;
             }
@@ -113,6 +119,23 @@ namespace Plantilla
 
         private void OrderBy_Id(object sender, RoutedEventArgs e)
         {
+            
+            var button = sender as Button;
+            if (button != null)
+            {
+                var stackPanel = button.Content as StackPanel;
+                if (stackPanel != null)
+                {
+                    var icon = stackPanel.Children.OfType<FontIcon>().FirstOrDefault();
+                    if (icon != null)
+                    {
+                        icon.Glyph = isSortedAscending ? "\uE96E" : "\uE96D";
+                    }
+                }
+            }
+
+            isSortedAscending = !isSortedAscending; // Toggle for next time
+
             try
             {
                 allProcesses = Process.GetProcesses()
@@ -124,8 +147,11 @@ namespace Plantilla
                         VirusStatus = "Scanning...",
                         Information = "Click for details"
                     })
-                    .OrderBy(p => p.ProcessId)
                     .ToList();
+
+                allProcesses = isSortedAscending
+                ? allProcesses.OrderBy(p => p.ProcessId).ToList()
+                : allProcesses.OrderByDescending(p => p.ProcessId).ToList();
 
                 ProcessListView.ItemsSource = allProcesses;
             }
@@ -133,6 +159,28 @@ namespace Plantilla
             {
                 ShowError($"Error loading processes: {ex.Message}");
             }
+        }
+
+        private void OrderBy_Name(object sender, RoutedEventArgs e)
+        {   // Update icon
+            var button = sender as Button;
+            if (button != null)
+            {
+                var stackPanel = button.Content as StackPanel;
+                if (stackPanel != null)
+                {
+                    var icon = stackPanel.Children.OfType<FontIcon>().FirstOrDefault();
+                    if (icon != null)
+                    {
+                        icon.Glyph = isSortedAscending ? "\uE96E" : "\uE96D";
+                    }
+                }
+            }
+
+            isSortedAscending = !isSortedAscending; // Toggle for next time
+
+            LoadProcesses();
+
         }
 
         private async void ShowProcessDetails(ProcessItem process)

@@ -115,25 +115,49 @@
                                         <ColumnDefinition Width="1*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="Process Name" 
-                                             Grid.Column="0" 
-                                             FontWeight="SemiBold"/>
-                                    <Button Grid.Column="1" 
-                                        Content="Process Id"
+                                    <Button Grid.Column="0"
+                                        Click="OrderBy_Name"
+                                        CornerRadius="4"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Text="Process Name" FontWeight="SemiBold" />
+                                            <FontIcon x:Name="SortByNameIcon_Name" Glyph="&#xE96E;"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="1"
                                         Click="OrderBy_Id"
                                         CornerRadius="4"
                                         Padding="0"
                                         Background="Transparent"
+                                        BorderBrush="Transparent">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Text="Process Id" FontWeight="SemiBold" />
+                                            <FontIcon x:Name="SortByNameIcon_Id" Glyph="&#xE96E;"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" 
+                                        Content="Application Related"
+                                        FontWeight="SemiBold"
+                                        CornerRadius="4"
+                                        Padding="0"
+                                        Background="Transparent"
                                         BorderBrush="Transparent"/>
-                                    <TextBlock Text="Application Related" 
-                                             Grid.Column="2" 
-                                             FontWeight="SemiBold"/>
-                                    <TextBlock Text="Virus Or Not" 
-                                             Grid.Column="3" 
-                                             FontWeight="SemiBold"/>
-                                    <TextBlock Text="Information" 
-                                             Grid.Column="4" 
-                                             FontWeight="SemiBold"/>
+                                    <Button Grid.Column="3" 
+                                        Content="Virus or not"
+                                        FontWeight="SemiBold"
+                                        CornerRadius="4"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"/>
+                                    <Button Grid.Column="4" 
+                                        Content="Process Id"
+                                        FontWeight="SemiBold"
+                                        CornerRadius="4"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"/>
                                 </Grid>
 
                                 <!-- Lista de procesos -->

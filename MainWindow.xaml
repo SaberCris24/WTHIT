@@ -56,7 +56,7 @@
         
         <!-- Lista de Procesos -->
         <Border Grid.Row="1" 
-                Margin="80,0,20,20"
+                Margin="80,20,20,20"
                 CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

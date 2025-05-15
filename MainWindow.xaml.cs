@@ -23,9 +23,9 @@ namespace Plantilla
 {
     public sealed partial class MainWindow : Window
     {
-        private List<string> sugerencias = new List<string>();
         private Frame rootFrame;
         private Grid? mainGrid;
+        private List<ProcessItem> allProcesses;
 
         public MainWindow(int MinWidth, int MinHeight)
         {
@@ -44,17 +44,10 @@ namespace Plantilla
             presenter.PreferredMinimumWidth = MinWidth;
             presenter.PreferredMinimumHeight = MinHeight;
             AppWindow.SetPresenter(presenter);
-
-            sugerencias = new List<string>
-            {
-                "explorer.exe",
-                "msedge.exe",
-                "notepad.exe",
-            };
             
             mainGrid = this.Content as Grid;
             rootFrame = new Frame();
-            // Cargar la lista inicial de procesos
+            allProcesses = new List<ProcessItem>();
             LoadProcesses();
         }
 
@@ -62,18 +55,18 @@ namespace Plantilla
         {
             try
             {
-                var processes = Process.GetProcesses()
+                allProcesses = Process.GetProcesses()
                     .Select(p => new ProcessItem
                     {
                         ProcessName = p.ProcessName,
                         ProcessId = p.Id,
                         ApplicationRelated = DetermineApplicationRelation(p.ProcessName),
-                        VirusStatus = "Scanning...", // En una implementación real, esto debería ser asíncrono
+                        VirusStatus = "Scanning...",
                         Information = "Click for details"
                     })
                     .ToList();
 
-                ProcessListView.ItemsSource = processes;
+                ProcessListView.ItemsSource = allProcesses;
             }
             catch (Exception ex)
             {
@@ -83,14 +76,12 @@ namespace Plantilla
 
         private string DetermineApplicationRelation(string processName)
         {
-            // Aquí puedes implementar la lógica para determinar si el proceso está relacionado
-            // con aplicaciones conocidas
             var knownApps = new Dictionary<string, string>
             {
                 { "explorer", "Windows Explorer" },
                 { "msedge", "Microsoft Edge" },
                 { "notepad", "Windows Notepad" }
-                // Agregar más aplicaciones conocidas según sea necesario
+                // Aqui agregar mas apps
             };
 
             foreach (var app in knownApps)
@@ -175,15 +166,36 @@ namespace Plantilla
             this.Content = mainGrid;
         }
 
-         private void OnThemeRadioButtonChecked(object sender, RoutedEventArgs e)
-            {
-                ((App)Application.Current).ThemeService.OnThemeRadioButtonChecked(sender);
-            }
+        private void OnThemeRadioButtonChecked(object sender, RoutedEventArgs e)
+        {
+            ((App)Application.Current).ThemeService.OnThemeRadioButtonChecked(sender);
+        }
 
-            private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ((App)Application.Current).ThemeService.OnThemeComboBoxSelectionChanged(sender);
+        }
+
+        private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
-                ((App)Application.Current).ThemeService.OnThemeComboBoxSelectionChanged(sender);
+                string searchText = sender.Text.ToLower();
+                
+                // Filtrar procesos que coincidan con el texto de búsqueda
+                var filteredProcesses = allProcesses
+                    .Where(p => p.ProcessName.ToLower().StartsWith(searchText))
+                    .Select(p => p.ProcessName)
+                    .Distinct()
+                    .ToList();
+
+                // Actualizar las sugerencias
+                sender.ItemsSource = filteredProcesses;
+
+                // Actualizar la lista de procesos en tiempo real
+                FilterProcesses(searchText);
             }
+        }
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
         {
@@ -191,40 +203,34 @@ namespace Plantilla
             {
                 FilterProcesses(args.QueryText);
             }
+            else
+            {
+                // Si la búsqueda está vacía, mostrar todos los procesos
+                ProcessListView.ItemsSource = allProcesses;
+            }
         }
 
         private void FilterProcesses(string searchText)
         {
-            if (ProcessListView.ItemsSource is List<ProcessItem> processes)
-            {
-                var filteredProcesses = processes
-                    .Where(p => p.ProcessName.ToLower().Contains(searchText.ToLower()) ||
-                               p.ApplicationRelated.ToLower().Contains(searchText.ToLower()))
-                    .ToList();
+            searchText = searchText.ToLower();
+            
+            var filteredProcesses = allProcesses
+                .Where(p => p.ProcessName.ToLower().Contains(searchText) ||
+                           p.ApplicationRelated.ToLower().Contains(searchText))
+                .ToList();
 
-                ProcessListView.ItemsSource = filteredProcesses;
-            }
-        }
-
-        private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-        {
-            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
-            {
-                var filteredItems = string.IsNullOrEmpty(sender.Text) ? 
-                    new string[] { } : 
-                    sugerencias
-                        .Where(p => p.ToLower().Contains(sender.Text.ToLower()))
-                        .ToArray();
-                
-                sender.ItemsSource = filteredItems;
-            }
+            ProcessListView.ItemsSource = filteredProcesses;
         }
 
         private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
         {
-            sender.Text = args.SelectedItem.ToString();
+            if (args.SelectedItem != null)
+            {
+                sender.Text = args.SelectedItem.ToString();
+                FilterProcesses(sender.Text);
+            }
         }
-        
+
         private void AboutButton_Click(object sender, RoutedEventArgs e)
         {
             StackPanel contentPanel = new StackPanel();
@@ -258,7 +264,7 @@ namespace Plantilla
 
             ContentDialog aboutDialog = new ContentDialog
             {
-                Title = "About",
+                Title = "About WTHIT",
                 Content = contentPanel,
                 CloseButtonText = "Close",
                 RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),

@@ -23,8 +23,6 @@ namespace Plantilla
 {
     public sealed partial class MainWindow : Window
     {
-        private Frame rootFrame;
-        private Grid? mainGrid;
         private List<ProcessItem> allProcesses;
 
         public MainWindow(int MinWidth, int MinHeight)
@@ -45,12 +43,14 @@ namespace Plantilla
             presenter.PreferredMinimumHeight = MinHeight;
             AppWindow.SetPresenter(presenter);
             
-            mainGrid = this.Content as Grid;
-            rootFrame = new Frame();
             allProcesses = new List<ProcessItem>();
             LoadProcesses();
         }
 
+        private void ShowSettings()
+         {
+             contentFrame.Navigate(typeof(SettingsPage));
+         }
         private void LoadProcesses()
         {
             try
@@ -154,27 +154,6 @@ namespace Plantilla
 
             await dialog.ShowAsync();
         }
-        
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Content = rootFrame;
-            rootFrame.Navigate(typeof(SettingsPage), this);
-        }
-
-        public void ReturnToMainInterface()
-        {
-            this.Content = mainGrid;
-        }
-
-        private void OnThemeRadioButtonChecked(object sender, RoutedEventArgs e)
-        {
-            ((App)Application.Current).ThemeService.OnThemeRadioButtonChecked(sender);
-        }
-
-        private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ((App)Application.Current).ThemeService.OnThemeComboBoxSelectionChanged(sender);
-        }
 
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
@@ -231,7 +210,27 @@ namespace Plantilla
             }
         }
 
-        private void AboutButton_Click(object sender, RoutedEventArgs e)
+        private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        {
+            if (args.SelectedItem is NavigationViewItem selectedItem)
+            {
+                switch (selectedItem.Tag.ToString())
+                {
+                    case "settings":
+                        ShowSettings();
+                        break;
+                    case "about":
+                        ShowAbout();
+                        break;
+                    case "processes":
+                        // Ya estamos en la vista de procesos
+                        break;
+                }
+            }
+        }
+
+
+        private void ShowAbout()
         {
             StackPanel contentPanel = new StackPanel();
 
@@ -258,7 +257,6 @@ namespace Plantilla
             };
 
             hyperlink.Inlines.Add(linkRun);
-            
             linkText.Inlines.Add(hyperlink);
             contentPanel.Children.Add(linkText);
 

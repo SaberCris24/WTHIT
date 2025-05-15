@@ -12,192 +12,175 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Encabezado -->
-        <Grid Grid.Row="0" Padding="12">
-            <TextBlock
-                x:Name="TitleTextBlock"
-                Text="What The Hell Is This?"
-                FontSize="40"
-                FontWeight="Bold"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="180,25,0,0"/>
+    <NavigationView x:Name="NavView"
+                    PaneDisplayMode="LeftCompact"
+                    IsBackButtonVisible="Collapsed"
+                    IsSettingsVisible="False"
+                    SelectionChanged="NavView_SelectionChanged">
 
-            <AutoSuggestBox 
-                x:Name="SearchBox"
-                PlaceholderText="Search for processes"
-                QueryIcon="Find"
-                Width="300"
-                HorizontalAlignment="Right"
-                Margin="0,60,25,0"
-                QuerySubmitted="SearchBox_QuerySubmitted"
-                TextChanged="SearchBox_TextChanged"
-                SuggestionChosen="SearchBox_SuggestionChosen">
-            </AutoSuggestBox>
+        <NavigationView.MenuItems>  
+            <NavigationViewItem x:Name="ProcessesItem"
+                              Content="Processes"
+                              Tag="processes"
+                              IsSelected="True">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE7F8;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.MenuItems>
 
-                    <ComboBox Name="cmbTheme"
-                        SelectionChanged="cmbTheme_SelectionChanged">
-                <ComboBoxItem Content="Light"
-                                Tag="Light" />
-                <ComboBoxItem Content="Dark"
-                                Tag="Dark" />
-                <ComboBoxItem Content="Default"
-                                Tag="Default" />
-            </ComboBox>
-
-
-        </Grid>
-        
-        <!-- Lista de Procesos -->
-        <Border Grid.Row="1" 
-                Margin="80,20,20,20"
-                CornerRadius="8"
-                BorderThickness="1"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+        <NavigationView.FooterMenuItems>
+            <NavigationViewItem x:Name="SettingsItem"
+                              Content="Settings"
+                              Tag="settings">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE713;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
             
-            <!-- Encabezados de columnas -->
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <NavigationViewItem x:Name="AboutItem"
+                              Content="About"
+                              Tag="about">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE946;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.FooterMenuItems>
 
-                <!-- Headers -->
-                <Grid Grid.Row="0" 
-                      Padding="16,12"
-                      Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="0.8*"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="1*"/>
-                    </Grid.ColumnDefinitions>
+        <Grid>
+            <Frame x:Name="contentFrame">
+                <Frame.Content>
+                    <!-- Contenido principal (vista de procesos) -->
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Encabezado -->
+                        <Grid Grid.Row="0" Padding="12">
+                            <TextBlock
+                                x:Name="TitleTextBlock"
+                                Text="What The Hell Is This?"
+                                FontSize="40"
+                                FontWeight="Bold"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="80,25,0,0"/>
 
-                    <TextBlock Text="Process Name" 
-                             Grid.Column="0" 
-                             FontWeight="SemiBold"/>
-                    <TextBlock Text="Process ID" 
-                             Grid.Column="1" 
-                             FontWeight="SemiBold"/>
-                    <TextBlock Text="Application Related" 
-                             Grid.Column="2" 
-                             FontWeight="SemiBold"/>
-                    <TextBlock Text="Virus Or Not" 
-                             Grid.Column="3" 
-                             FontWeight="SemiBold"/>
-                    <TextBlock Text="Information" 
-                             Grid.Column="4" 
-                             FontWeight="SemiBold"/>
-                </Grid>
-
-                <!-- Lista de procesos -->
-                <ListView x:Name="ProcessListView"
-                         Grid.Row="1"
-                         Margin="4"
-                         SelectionMode="Single"
-                         IsItemClickEnabled="True">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Margin" Value="4"/>
-                            <Setter Property="Padding" Value="12"/>
-                            <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
+                            <AutoSuggestBox 
+                                x:Name="SearchBox"
+                                PlaceholderText="Search for processes"
+                                QueryIcon="Find"
+                                Width="300"
+                                HorizontalAlignment="Right"
+                                Margin="0,60,25,0"
+                                QuerySubmitted="SearchBox_QuerySubmitted"
+                                TextChanged="SearchBox_TextChanged"
+                                SuggestionChosen="SearchBox_SuggestionChosen">
+                            </AutoSuggestBox>
+                        </Grid>
+                        
+                        <!-- Lista de Procesos -->
+                        <Border Grid.Row="1" 
+                                Margin="20"
+                                CornerRadius="8"
+                                BorderThickness="1"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            
+                            <!-- Encabezados de columnas -->
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="0.8*"/>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="1*"/>
-                                    <ColumnDefinition Width="1*"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Column="0" 
-                                         Text="{Binding ProcessName}"
-                                         VerticalAlignment="Center"/>
-                                
-                                <TextBlock Grid.Column="1" 
-                                         Text="{Binding ProcessId}"
-                                         VerticalAlignment="Center"/>
-                                
-                                <TextBlock Grid.Column="2" 
-                                         Text="{Binding ApplicationRelated}"
-                                         VerticalAlignment="Center"/>
-                                
-                                <TextBlock Grid.Column="3" 
-                                         Text="{Binding VirusStatus}"
-                                         VerticalAlignment="Center"/>
-                                
-                                <Button Grid.Column="4" 
-                                        Content="View Details"
-                                        Click="ViewDetails_Click"
-                                        CornerRadius="4"
-                                        Padding="8,4"/>
+                                <!-- Headers -->
+                                <Grid Grid.Row="0" 
+                                      Padding="16,12"
+                                      Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="0.8*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="Process Name" 
+                                             Grid.Column="0" 
+                                             FontWeight="SemiBold"/>
+                                    <TextBlock Text="Process ID" 
+                                             Grid.Column="1" 
+                                             FontWeight="SemiBold"/>
+                                    <TextBlock Text="Application Related" 
+                                             Grid.Column="2" 
+                                             FontWeight="SemiBold"/>
+                                    <TextBlock Text="Virus Or Not" 
+                                             Grid.Column="3" 
+                                             FontWeight="SemiBold"/>
+                                    <TextBlock Text="Information" 
+                                             Grid.Column="4" 
+                                             FontWeight="SemiBold"/>
+                                </Grid>
+
+                                <!-- Lista de procesos -->
+                                <ListView x:Name="ProcessListView"
+                                         Grid.Row="1"
+                                         Margin="4"
+                                         SelectionMode="Single"
+                                         IsItemClickEnabled="True">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="Margin" Value="4"/>
+                                            <Setter Property="Padding" Value="12"/>
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="1.5*"/>
+                                                    <ColumnDefinition Width="0.8*"/>
+                                                    <ColumnDefinition Width="1.5*"/>
+                                                    <ColumnDefinition Width="1*"/>
+                                                    <ColumnDefinition Width="1*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" 
+                                                         Text="{Binding ProcessName}"
+                                                         VerticalAlignment="Center"/>
+                                                
+                                                <TextBlock Grid.Column="1" 
+                                                         Text="{Binding ProcessId}"
+                                                         VerticalAlignment="Center"/>
+                                                
+                                                <TextBlock Grid.Column="2" 
+                                                         Text="{Binding ApplicationRelated}"
+                                                         VerticalAlignment="Center"/>
+                                                
+                                                <TextBlock Grid.Column="3" 
+                                                         Text="{Binding VirusStatus}"
+                                                         VerticalAlignment="Center"/>
+                                                
+                                                <Button Grid.Column="4" 
+                                                        Content="View Details"
+                                                        Click="ViewDetails_Click"
+                                                        CornerRadius="4"
+                                                        Padding="8,4"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
                             </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </Grid>
-        </Border>
-
-        <!-- Panel inferior con botones -->
-        <StackPanel Grid.Row="1" 
-                    Orientation="Vertical" 
-                    HorizontalAlignment="Left" 
-                    VerticalAlignment="Bottom"
-                    Margin="20,0,0,20" 
-                    Spacing="12">
-            <!-- Botón de configuración -->
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
-                <Button x:Name="SettingsButton"
-                        Click="SettingsButton_Click"
-                        Width="40"
-                        Height="40"
-                        Padding="0"
-                        CornerRadius="10"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center">
-                     <FontIcon
-                        Glyph="&#xE713;"
-                        FontSize="16"/>
-                </Button>
-                <TextBlock Text="Settings"
-                    HorizontalAlignment="Center"
-                    Margin="0,5,0,0"
-                    FontSize="12"/>
-            </StackPanel>
-
-            <!-- Botón About -->
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
-                <Button x:Name="AboutButton"
-                        Click="AboutButton_Click"
-                        Width="40"
-                        Height="40"
-                        Padding="0"
-                        CornerRadius="10"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center">
-                     <FontIcon
-                        Glyph="&#xE946;"
-                        FontSize="16"/>
-                </Button>
-                <TextBlock Text="About"
-                    HorizontalAlignment="Center"
-                    Margin="0,5,0,0"
-                    FontSize="12"/>
-            </StackPanel>
-        </StackPanel>
-    </Grid>
+                        </Border>
+                    </Grid>
+                </Frame.Content>
+            </Frame>
+        </Grid>
+    </NavigationView>
 </Window>

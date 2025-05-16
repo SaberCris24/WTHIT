@@ -35,7 +35,7 @@ namespace Plantilla
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            MainWindow = new MainWindow(1000, 400);
+            MainWindow = new MainWindow(800, 400);
             MainWindow.ExtendsContentIntoTitleBar = true;
             MainWindow.Activate();
 

@@ -1,10 +1,10 @@
 using Microsoft.UI.Xaml.Controls;
 
-namespace Plantilla
+namespace Plantilla.Pages.About
 {
-    public sealed partial class SettingsPage : Page
+    public sealed partial class AboutPage : Page
     {
-        public SettingsPage()
+        public AboutPage()
         {
             this.InitializeComponent();
         }

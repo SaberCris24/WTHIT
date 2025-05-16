@@ -29,18 +29,19 @@ namespace Plantilla
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            if (args.SelectedItem is NavigationViewItem selectedItem)
+            if (args.IsSettingsSelected)
+            {
+                contentFrame.Navigate(typeof(SettingsPage));
+            }
+            else if (args.SelectedItem is NavigationViewItem selectedItem)
             {
                 switch (selectedItem.Tag.ToString())
                 {
-                    case "settings":
-                        contentFrame.Navigate(typeof(SettingsPage));
+                    case "processes":
+                        contentFrame.Navigate(typeof(ProcessesPage));
                         break;
                     case "about":
                         contentFrame.Navigate(typeof(AboutPage));
-                        break;
-                    case "processes":
-                        contentFrame.Navigate(typeof(ProcessesPage));
                         break;
                 }
             }

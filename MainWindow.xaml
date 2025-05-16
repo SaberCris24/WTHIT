@@ -7,13 +7,17 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Plantilla">
-
-    <NavigationView x:Name="NavView"
-                    PaneDisplayMode="LeftCompact"
+    
+    <NavigationView x:Name="NavView" 
+                    PaneDisplayMode="Left"
+                    IsPaneOpen="False"
+                    OpenPaneLength="200"
+                    CompactPaneLength="48"
+                    SelectionChanged="NavView_SelectionChanged"
                     IsBackButtonVisible="Collapsed"
-                    IsSettingsVisible="False"
-                    SelectionChanged="NavView_SelectionChanged">
-
+                    IsPaneToggleButtonVisible="True"
+                    IsSettingsVisible="True">
+          
         <NavigationView.MenuItems>  
             <NavigationViewItem x:Name="ProcessesItem"
                               Content="Processes"
@@ -26,14 +30,6 @@
         </NavigationView.MenuItems>
 
         <NavigationView.FooterMenuItems>
-            <NavigationViewItem x:Name="SettingsItem"
-                              Content="Settings"
-                              Tag="settings">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE713;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            
             <NavigationViewItem x:Name="AboutItem"
                               Content="About"
                               Tag="about">

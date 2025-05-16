@@ -17,10 +17,10 @@ namespace Plantilla.Pages.Processes
         {
             this.InitializeComponent();
             allProcesses = new List<ProcessItem>();
-            LoadProcesses();
+            this.Loaded += LoadProcesses;
         }
 
-        private void LoadProcesses()
+        private void LoadProcesses(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -98,7 +98,7 @@ namespace Plantilla.Pages.Processes
         {
             UpdateSortingIcon(sender);
             isSortedAscending = !isSortedAscending;
-            LoadProcesses();
+            LoadProcesses(sender, e);
         }
 
         private void UpdateSortingIcon(object sender)

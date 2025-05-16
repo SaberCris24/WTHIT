@@ -7,10 +7,21 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Plantilla">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <TitleBar Name = "AppTitleBar"
+            IsBackButtonVisible="False"
+            IsPaneToggleButtonVisible="False"/>
     
     <NavigationView x:Name="NavView" 
                     PaneDisplayMode="Left"
                     IsPaneOpen="False"
+                    Grid.Row = "1"
                     OpenPaneLength="200"
                     CompactPaneLength="48"
                     SelectionChanged="NavView_SelectionChanged"
@@ -41,4 +52,6 @@
 
         <Frame x:Name="contentFrame"/>
     </NavigationView>
+
+    </Grid>
 </Window>

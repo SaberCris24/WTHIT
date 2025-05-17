@@ -26,6 +26,7 @@ namespace Plantilla.Pages.Processes
         };
 
         private List<ProcessItem> allProcesses; // Static to persist across navigations
+        private static bool _processesLoaded = false;
 
         public bool IsProcessSelected
         {
@@ -59,12 +60,20 @@ namespace Plantilla.Pages.Processes
                 RefreshProcessesFromAll();
             }
 
-            this.Loaded += (s, e) => LoadProcesses();
+            this.Loaded += (s, e) =>
+            {
+                if (!_processesLoaded)
+                {
+                    LoadProcesses();
+                    _processesLoaded = true;
+                }
+            };
         }
 
         private void LoadProcessesToAll()
         {
             allProcesses.Clear();
+            _processCache.Clear();
             foreach (Process process in Process.GetProcesses())
             {
                 allProcesses.Add(new ProcessItem
@@ -95,6 +104,7 @@ namespace Plantilla.Pages.Processes
             {
                 LoadingRing.IsActive = true;
                 Processes.Clear();
+                _processCache.Clear();
 
                 foreach (Process process in Process.GetProcesses())
                 {

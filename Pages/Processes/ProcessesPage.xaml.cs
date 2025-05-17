@@ -1,251 +1,381 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using Plantilla.Models;
+using System.ComponentModel;
+using System.IO;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Win32;
 
 namespace Plantilla.Pages.Processes
 {
-    public sealed partial class ProcessesPage : Page
+    public sealed partial class ProcessesPage : Page, INotifyPropertyChanged
     {
-        private List<ProcessItem> allProcesses;
-        private bool isSortedAscending = true;
+        private ObservableCollection<ProcessItem> Processes { get; set; }
+        private bool _isProcessSelected;
+        private bool _isNameSortAscending = true;
+        private bool _isIdSortAscending = true;
+        private readonly Dictionary<string, string> _processCache = new Dictionary<string, string>();
+        private readonly HashSet<string> _systemProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system"
+        };
+
+        public bool IsProcessSelected
+        {
+            get => _isProcessSelected;
+            private set
+            {
+                if (_isProcessSelected != value)
+                {
+                    _isProcessSelected = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsProcessSelected)));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public ProcessesPage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
-            if (allProcesses == null)
-            {
-                allProcesses = new List<ProcessItem>();
-            }
-            this.Loaded += LoadProcesses;
-            this.Unloaded += (s, e) => this.Loaded -= LoadProcesses;
+            Processes = new ObservableCollection<ProcessItem>();
+            ProcessListView.ItemsSource = Processes;
+            LoadProcesses();
         }
 
-        private void LoadProcesses(object sender, RoutedEventArgs e)
+        private void LoadProcesses()
         {
             try
             {
-                allProcesses = Process.GetProcesses()
-                    .Select(p => new ProcessItem
-                    {
-                        ProcessName = p.ProcessName,
-                        ProcessId = p.Id,
-                        ApplicationRelated = DetermineApplicationRelation(p.ProcessName),
-                        VirusStatus = "Scanning...",
-                        Information = "Click for details"
-                    })
-                    .OrderBy(p => p.ProcessName)
-                    .ToList();
+                LoadingRing.IsActive = true;
+                Processes.Clear();
 
-                ProcessListView.ItemsSource = allProcesses;
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+                foreach (Process process in Process.GetProcesses())
+                {
+                    Processes.Add(new ProcessItem
+                    {
+                        ProcessName = process.ProcessName,
+                        ProcessId = process.Id,
+                        ApplicationRelated = GetApplicationInfo(process),
+                        VirusStatus = "Not Scanned",
+                        Information = "Click to view details",
+                        IsSelected = false
+                    });
+                }
+
+                UpdateSelectionState();
             }
             catch (Exception ex)
             {
                 ShowError($"Error loading processes: {ex.Message}");
             }
+            finally
+            {
+                LoadingRing.IsActive = false;
+            }
         }
 
-        private string DetermineApplicationRelation(string processName)
+        private string GetApplicationInfo(Process process)
         {
-            var knownApps = new Dictionary<string, string>
+            try
             {
-                { "explorer", "Windows Explorer" },
-                { "msedge", "Microsoft Edge" },
-                { "notepad", "Windows Notepad" }
-            };
-
-            foreach (var app in knownApps)
-            {
-                if (processName.ToLower().Contains(app.Key))
+                // Verificar cache primero
+                if (_processCache.TryGetValue(process.ProcessName, out string cachedInfo))
                 {
-                    return app.Value;
+                    return cachedInfo;
+                }
+
+                // Para procesos del sistema, devolver rápidamente
+                if (_systemProcesses.Contains(process.ProcessName))
+                {
+                    var result = $"Windows {process.ProcessName}";
+                    _processCache[process.ProcessName] = result;
+                    return result;
+                }
+
+                string appInfo = "Unknown";
+
+                try
+                {
+                    string processPath = process.MainModule?.FileName ?? string.Empty;
+                    if (!string.IsNullOrEmpty(processPath))
+                    {
+                        // Intentar obtener información del registro para Store Apps
+                        if (processPath.Contains("WindowsApps"))
+                        {
+                            appInfo = GetStoreAppName(processPath);
+                        }
+                        else
+                        {
+                            // Obtener información del ejecutable
+                            var versionInfo = FileVersionInfo.GetVersionInfo(processPath);
+                            appInfo = GetBestAppName(versionInfo, processPath);
+                        }
+
+                        // Intentar obtener información adicional del registro
+                        var registryInfo = GetRegistryAppInfo(process.ProcessName);
+                        if (!string.IsNullOrEmpty(registryInfo))
+                        {
+                            appInfo = registryInfo;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Si falla el acceso al proceso, intentar con el registro
+                    appInfo = GetRegistryAppInfo(process.ProcessName) ?? "System Process";
+                }
+
+                // Guardar en cache
+                _processCache[process.ProcessName] = appInfo;
+                return appInfo;
+            }
+            catch (Exception)
+            {
+                return "Unknown";
+            }
+        }
+
+        private string GetBestAppName(FileVersionInfo versionInfo, string processPath)
+        {
+            // Intentar obtener el mejor nombre disponible en orden de preferencia
+            return new[]
+            {
+                versionInfo.ProductName,
+                versionInfo.FileDescription,
+                versionInfo.CompanyName,
+                Path.GetFileNameWithoutExtension(processPath)
+            }
+            .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? "Unknown";
+        }
+
+        private string GetStoreAppName(string processPath)
+        {
+            try
+            {
+                var pathParts = processPath.Split('\\');
+                var appIndex = Array.FindIndex(pathParts, x => x.Equals("WindowsApps", StringComparison.OrdinalIgnoreCase));
+                if (appIndex >= 0 && pathParts.Length > appIndex + 1)
+                {
+                    var appPart = pathParts[appIndex + 1];
+                    var namePart = appPart.Split('_')[0];
+                    
+                    // Intentar obtener el nombre amigable del registro
+                    using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families\" + namePart))
+                    {
+                        if (key?.GetValue("DisplayName") is string displayName)
+                        {
+                            return displayName;
+                        }
+                    }
+                    
+                    // Si no se encuentra en el registro, formatear el nombre del paquete
+                    return $"Store: {FormatAppName(namePart)}";
                 }
             }
-
-            return "Unknown Application";
+            catch { }
+            
+            return "Windows Store App";
         }
 
-        private void ViewDetails_Click(object sender, RoutedEventArgs e)
+        private string GetRegistryAppInfo(string processName)
         {
-            if (sender is Button button && button.DataContext is ProcessItem process)
-            {
-                ShowProcessDetails(process);
-            }
-        }
-
-        private void OrderBy_Id(object sender, RoutedEventArgs e)
-        {
-            UpdateSortingIcon(sender);
-            isSortedAscending = !isSortedAscending;
-
             try
             {
-
-                ProcessListView.ItemsSource = null;
-
-                if (isSortedAscending)
-                    allProcesses.Sort((a, b) => a.ProcessId.CompareTo(b.ProcessId));
-                else
-                    allProcesses.Sort((a, b) => b.ProcessId.CompareTo(a.ProcessId));
-
-                    ProcessListView.ItemsSource = allProcesses;
-
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Error sorting processes: {ex.Message}");
-            }
-        }
-
-        private void OrderBy_Name(object sender, RoutedEventArgs e)
-        {
-            UpdateSortingIcon(sender);
-            isSortedAscending = !isSortedAscending;
-
-            try
-            {
-                ProcessListView.ItemsSource = null;
-
-                if (isSortedAscending)
-                    allProcesses.Sort((a, b) => a.ProcessId.CompareTo(b.ProcessName));
-                else
-                    allProcesses.Sort((a, b) => b.ProcessId.CompareTo(a.ProcessName));
-
-                ProcessListView.ItemsSource = allProcesses;
-
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Error sorting processes: {ex.Message}");
-            }
-        }
-
-        private void UpdateSortingIcon(object sender)
-        {
-            if (sender is Button button)
-            {
-                if (button.Content is StackPanel stackPanel)
+                // Buscar en diferentes ubicaciones del registro
+                var registryPaths = new[]
                 {
-                    if (stackPanel.Children.OfType<FontIcon>().FirstOrDefault() is FontIcon icon)
+                    @"Software\Microsoft\Windows\CurrentVersion\App Paths\",
+                    @"Software\Microsoft\Windows\CurrentVersion\Uninstall\",
+                    @"Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\"
+                };
+
+                foreach (var basePath in registryPaths)
+                {
+                    using (var baseKey = Registry.LocalMachine.OpenSubKey(basePath))
                     {
-                        icon.Glyph = isSortedAscending ? "\uE96E" : "\uE96D";
+                        if (baseKey == null) continue;
+
+                        foreach (var keyName in baseKey.GetSubKeyNames())
+                        {
+                            using (var key = baseKey.OpenSubKey(keyName))
+                            {
+                                if (key == null) continue;
+
+                                var displayName = key.GetValue("DisplayName") as string;
+                                var exeName = Path.GetFileNameWithoutExtension(keyName);
+
+                                if (!string.IsNullOrEmpty(displayName) && 
+                                    exeName.Equals(processName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    return displayName;
+                                }
+                            }
+                        }
                     }
                 }
             }
+            catch { }
+
+            return null;
         }
 
-        private async void ShowProcessDetails(ProcessItem process)
+        private string FormatAppName(string name)
         {
-            var detailsPanel = new StackPanel { Spacing = 10 };
-
-            detailsPanel.Children.Add(new TextBlock
-            {
-                Text = $"Process Name: {process.ProcessName}",
-                TextWrapping = TextWrapping.Wrap
-            });
-
-            detailsPanel.Children.Add(new TextBlock
-            {
-                Text = $"Process ID: {process.ProcessId}",
-                TextWrapping = TextWrapping.Wrap
-            });
-
-            detailsPanel.Children.Add(new TextBlock
-            {
-                Text = $"Application: {process.ApplicationRelated}",
-                TextWrapping = TextWrapping.Wrap
-            });
-
-            detailsPanel.Children.Add(new TextBlock
-            {
-                Text = $"Security Status: {process.VirusStatus}",
-                TextWrapping = TextWrapping.Wrap
-            });
-
-            ContentDialog dialog = new ContentDialog
-            {
-                Title = "Process Details",
-                Content = detailsPanel,
-                CloseButtonText = "Close",
-                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
-                XamlRoot = this.XamlRoot
-            };
-
-            await dialog.ShowAsync();
+            return System.Text.RegularExpressions.Regex.Replace(
+                name,
+                "([A-Z])",
+                " $1",
+                System.Text.RegularExpressions.RegexOptions.Compiled
+            ).Trim();
         }
 
-        private async void ShowError(string message)
+        private void ShowError(string message)
         {
-            ContentDialog dialog = new ContentDialog
-            {
-                Title = "Error",
-                Content = message,
-                CloseButtonText = "OK",
-                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
-                XamlRoot = this.XamlRoot
-            };
+            StatusInfoBar.Message = message;
+            StatusInfoBar.Severity = InfoBarSeverity.Error;
+            StatusInfoBar.IsOpen = true;
+        }
 
-            await dialog.ShowAsync();
+        private void ShowSuccess(string message)
+        {
+            StatusInfoBar.Message = message;
+            StatusInfoBar.Severity = InfoBarSeverity.Success;
+            StatusInfoBar.IsOpen = true;
+        }
+
+        private void UpdateSelectionState()
+        {
+            IsProcessSelected = Processes.Any(p => p.IsSelected);
+        }
+
+        private void RefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            LoadProcesses();
+        }
+
+        private void ScanButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedProcesses = Processes.Where(p => p.IsSelected).ToList();
+            if (selectedProcesses.Any())
+            {
+                foreach (var process in selectedProcesses)
+                {
+                    process.VirusStatus = "Scanning...";
+                }
+
+                ShowSuccess($"Started scanning {selectedProcesses.Count} process(es).");
+            }
+        }
+
+        private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (string.IsNullOrWhiteSpace(args.QueryText))
+            {
+                LoadProcesses();
+                return;
+            }
+
+            var filtered = Processes
+                .Where(p => p.ProcessName.Contains(args.QueryText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            Processes.Clear();
+            foreach (var process in filtered)
+            {
+                Processes.Add(process);
+            }
         }
 
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
             if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
-                string searchText = sender.Text.ToLower();
+                if (string.IsNullOrWhiteSpace(sender.Text))
+                {
+                    LoadProcesses();
+                    return;
+                }
 
-                var filteredProcesses = allProcesses
-                    .Where(p => p.ProcessName.ToLower().StartsWith(searchText))
+                var suggestions = Processes
+                    .Where(p => p.ProcessName.Contains(sender.Text, StringComparison.OrdinalIgnoreCase))
                     .Select(p => p.ProcessName)
                     .Distinct()
+                    .Take(5)
                     .ToList();
 
-                sender.ItemsSource = filteredProcesses;
-                FilterProcesses(searchText);
+                sender.ItemsSource = suggestions;
             }
-        }
-
-        private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-        {
-            if (!string.IsNullOrEmpty(args.QueryText))
-            {
-                FilterProcesses(args.QueryText);
-            }
-            else
-            {
-                ProcessListView.ItemsSource = allProcesses;
-            }
-        }
-
-        private void FilterProcesses(string searchText)
-        {
-            searchText = searchText.ToLower();
-            
-            var filteredProcesses = allProcesses
-                .Where(p => p.ProcessName.ToLower().Contains(searchText) ||
-                           p.ApplicationRelated.ToLower().Contains(searchText))
-                .ToList();
-
-            ProcessListView.ItemsSource = filteredProcesses;
         }
 
         private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
         {
-            if (args.SelectedItem != null)
+            if (args.SelectedItem is string processName)
             {
-                sender.Text = args.SelectedItem.ToString();
-                FilterProcesses(sender.Text);
+                sender.Text = processName;
+            }
+        }
+
+        private void OrderBy_Name(object sender, RoutedEventArgs e)
+        {
+            var ordered = _isNameSortAscending 
+                ? Processes.OrderBy(p => p.ProcessName).ToList()
+                : Processes.OrderByDescending(p => p.ProcessName).ToList();
+
+            _isNameSortAscending = !_isNameSortAscending;
+            SortByNameIcon_Name.Glyph = _isNameSortAscending ? "\uE70D" : "\uE70E";
+
+            Processes.Clear();
+            foreach (var process in ordered)
+            {
+                Processes.Add(process);
+            }
+        }
+
+        private void OrderBy_Id(object sender, RoutedEventArgs e)
+        {
+            var ordered = _isIdSortAscending
+                ? Processes.OrderBy(p => p.ProcessId).ToList()
+                : Processes.OrderByDescending(p => p.ProcessId).ToList();
+
+            _isIdSortAscending = !_isIdSortAscending;
+            SortByNameIcon_Id.Glyph = _isIdSortAscending ? "\uE70D" : "\uE70E";
+
+            Processes.Clear();
+            foreach (var process in ordered)
+            {
+                Processes.Add(process);
+            }
+        }
+
+        private void ProcessCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            UpdateSelectionState();
+        }
+
+        private void ProcessCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            UpdateSelectionState();
+        }
+
+        private void ProcessListView_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is ProcessItem process)
+            {
+                ShowSuccess($"Process: {process.ProcessName} (ID: {process.ProcessId})");
+            }
+        }
+
+        private void ViewDetails_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.DataContext is ProcessItem process)
+            {
+                ShowSuccess($"Process Details - Name: {process.ProcessName} (ID: {process.ProcessId})");
             }
         }
     }

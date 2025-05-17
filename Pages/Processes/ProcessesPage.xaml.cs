@@ -33,11 +33,8 @@ namespace Plantilla.Pages.Processes
                         VirusStatus = "Scanning...",
                         Information = "Click for details"
                     })
+                    .OrderBy(p => p.ProcessName)
                     .ToList();
-
-                allProcesses = isSortedAscending
-                    ? allProcesses.OrderBy(p => p.ProcessName).ToList()
-                    : allProcesses.OrderByDescending(p => p.ProcessName).ToList();
 
                 ProcessListView.ItemsSource = allProcesses;
             }
@@ -98,7 +95,19 @@ namespace Plantilla.Pages.Processes
         {
             UpdateSortingIcon(sender);
             isSortedAscending = !isSortedAscending;
-            LoadProcesses(sender, e);
+
+            try
+            {
+                allProcesses = isSortedAscending
+                    ? allProcesses.OrderBy(p => p.ProcessName).ToList()
+                    : allProcesses.OrderByDescending(p => p.ProcessName).ToList();
+
+                ProcessListView.ItemsSource = allProcesses;
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Error sorting processes: {ex.Message}");
+            }
         }
 
         private void UpdateSortingIcon(object sender)

@@ -21,7 +21,6 @@ namespace Plantilla
         private const int WM_SETICON = 0x0080;
         private const uint IMAGE_ICON = 1;
         private const uint LR_LOADFROMFILE = 0x00000010;
-        private ProcessesPage _processesPage = new ProcessesPage();
 
         public MainWindow(int MinWidth, int MinHeight)
         {
@@ -43,7 +42,7 @@ namespace Plantilla
             AppWindow.SetPresenter(presenter);
 
             // Navigate to Processes page by default
-            contentFrame.Content = _processesPage;
+            contentFrame.Navigate(typeof(ProcessesPage));
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -57,7 +56,7 @@ namespace Plantilla
                 switch (selectedItem.Tag.ToString())
                 {
                     case "processes":
-                        contentFrame.Content = _processesPage;
+                        contentFrame.Navigate(typeof(ProcessesPage));
                         break;
                     case "about":
                         contentFrame.Navigate(typeof(AboutPage));

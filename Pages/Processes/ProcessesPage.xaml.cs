@@ -25,7 +25,7 @@ namespace Plantilla.Pages.Processes
             "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system"
         };
 
-        private List<ProcessItem> allProcesses; // Static to persist across navigations
+        private List<ProcessItem> allProcesses;
         private static bool _processesLoaded = false;
 
         public bool IsProcessSelected

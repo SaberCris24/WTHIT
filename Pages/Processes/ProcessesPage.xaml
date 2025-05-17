@@ -12,31 +12,61 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <!-- Encabezado -->
+        <!-- Header -->
         <Grid Grid.Row="0" Padding="12">
-            <TextBlock
-                x:Name="TitleTextBlock"
-                Text="What The Hell Is This?"
-                FontSize="40"
-                FontWeight="Bold"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="80,25,0,0"/>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <AutoSuggestBox 
-                x:Name="SearchBox"
-                PlaceholderText="Search for processes"
-                QueryIcon="Find"
-                Width="300"
-                HorizontalAlignment="Right"
-                Margin="0,60,25,0"
-                QuerySubmitted="SearchBox_QuerySubmitted"
-                TextChanged="SearchBox_TextChanged"
-                SuggestionChosen="SearchBox_SuggestionChosen">
-            </AutoSuggestBox>
+            <Grid Grid.Row="0">
+                <TextBlock
+                    x:Name="TitleTextBlock"
+                    Text="What The Hell Is This?"
+                    FontSize="40"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="80,25,0,0"/>
+
+                <StackPanel Orientation="Horizontal" 
+                          HorizontalAlignment="Right" 
+                          VerticalAlignment="Center"
+                          Spacing="8"
+                          Margin="0,25,25,0">
+                    <Button x:Name="ScanButton"
+                            Click="ScanButton_Click"
+                            IsEnabled="{x:Bind IsProcessSelected, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE9F9;"/>
+                            <TextBlock Text="Scan Selected Process"/>
+                        </StackPanel>
+                    </Button>
+
+                    <AutoSuggestBox 
+                        x:Name="SearchBox"
+                        PlaceholderText="Search for processes"
+                        QueryIcon="Find"
+                        Width="300"
+                        QuerySubmitted="SearchBox_QuerySubmitted"
+                        TextChanged="SearchBox_TextChanged"
+                        SuggestionChosen="SearchBox_SuggestionChosen">
+                    </AutoSuggestBox>
+
+                    <Button x:Name="RefreshButton"
+                            Click="RefreshButton_Click"
+                            Width="32"
+                            Height="32"
+                            Padding="4"
+                            ToolTipService.ToolTip="Refresh List">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Grid>
         
-        <!-- Lista de Procesos -->
+        <!-- Process List -->
         <Border Grid.Row="1" 
                 Margin="20"
                 CornerRadius="8"
@@ -63,69 +93,54 @@
                     </Grid.ColumnDefinitions>
 
                     <Button Grid.Column="0"
-                        Click="OrderBy_Name"
-                        CornerRadius="4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                            Click="OrderBy_Name"
+                            CornerRadius="4"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="4">
                             <TextBlock Text="Process Name" FontWeight="SemiBold" />
                             <FontIcon x:Name="SortByNameIcon_Name" Glyph="&#xE96D;"/>
                         </StackPanel>
                     </Button>
 
                     <Button Grid.Column="1"
-                        Click="OrderBy_Id"
-                        CornerRadius="4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent">
+                            Click="OrderBy_Id"
+                            CornerRadius="4"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
                             <TextBlock Text="Process Id" FontWeight="SemiBold" />
                             <FontIcon x:Name="SortByNameIcon_Id" Glyph="&#xE96D;"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="2" 
-                        Content="Application Related"
-                        FontWeight="SemiBold"
-                        CornerRadius="4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"/>
+                    <TextBlock Grid.Column="2" 
+                             Text="Application Related"
+                             FontWeight="SemiBold"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
 
-                    <Button Grid.Column="3" 
-                        Content="Virus or not"
-                        FontWeight="SemiBold"
-                        CornerRadius="4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"/>
+                    <TextBlock Grid.Column="3" 
+                             Text="Virus Status"
+                             FontWeight="SemiBold"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
 
-                    <Button Grid.Column="4" 
-                        Content="Information"
-                        FontWeight="SemiBold"
-                        CornerRadius="4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"/>
+                    <TextBlock Grid.Column="4" 
+                             Text="Information"
+                             FontWeight="SemiBold"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
                 </Grid>
 
-                <!-- Lista de procesos -->
+                <!-- Process List -->
                 <ListView x:Name="ProcessListView"
                          Grid.Row="1"
-                         Margin="4"
-                         SelectionMode="Single"
-                         IsItemClickEnabled="True">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Margin" Value="4"/>
-                            <Setter Property="Padding" Value="12"/>
-                            <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
+                         SelectionMode="None"
+                         IsItemClickEnabled="True"
+                         ItemClick="ProcessListView_ItemClick">
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid>
@@ -137,32 +152,51 @@
                                     <ColumnDefinition Width="1*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" 
-                                         Text="{Binding ProcessName}"
-                                         VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="0" 
+                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                         Content="{Binding ProcessName}"
+                                         Checked="ProcessCheckBox_Checked"
+                                         Unchecked="ProcessCheckBox_Unchecked"/>
                                 
                                 <TextBlock Grid.Column="1" 
                                          Text="{Binding ProcessId}"
-                                         VerticalAlignment="Center"/>
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Left"/>
                                 
                                 <TextBlock Grid.Column="2" 
                                          Text="{Binding ApplicationRelated}"
-                                         VerticalAlignment="Center"/>
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Center"/>
                                 
                                 <TextBlock Grid.Column="3" 
                                          Text="{Binding VirusStatus}"
-                                         VerticalAlignment="Center"/>
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Center"/>
                                 
-                                <Button Grid.Column="4" 
-                                        Content="View Details"
+                                <Button Grid.Column="4"
+                                        Content="View Info"
                                         Click="ViewDetails_Click"
-                                        CornerRadius="4"
-                                        Padding="8,4"/>
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        BorderThickness="0"/>
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
             </Grid>
         </Border>
+
+        <!-- Loading and Status Indicators -->
+        <ProgressRing x:Name="LoadingRing"
+                      Grid.Row="1"
+                      Width="50"
+                      Height="50"
+                      IsActive="False"/>
+
+        <InfoBar x:Name="StatusInfoBar"
+                 Grid.Row="1"
+                 IsOpen="False"
+                 VerticalAlignment="Bottom"
+                 Margin="20"/>
     </Grid>
 </Page>

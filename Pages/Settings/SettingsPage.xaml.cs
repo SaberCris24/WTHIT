@@ -8,6 +8,7 @@ namespace Plantilla.Pages.Settings
         public SettingsPage()
         {
             this.InitializeComponent();
+            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
             ((App)Application.Current).ThemeService.SetThemeComboBoxDefaultItem(cmbTheme);
         }
 

@@ -16,8 +16,13 @@ namespace Plantilla.Pages.Processes
         public ProcessesPage()
         {
             this.InitializeComponent();
-            allProcesses = new List<ProcessItem>();
+            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
+            if (allProcesses == null)
+            {
+                allProcesses = new List<ProcessItem>();
+            }
             this.Loaded += LoadProcesses;
+            this.Unloaded += (s, e) => this.Loaded -= LoadProcesses;
         }
 
         private void LoadProcesses(object sender, RoutedEventArgs e)
@@ -37,6 +42,8 @@ namespace Plantilla.Pages.Processes
                     .ToList();
 
                 ProcessListView.ItemsSource = allProcesses;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
             }
             catch (Exception ex)
             {
@@ -79,11 +86,19 @@ namespace Plantilla.Pages.Processes
 
             try
             {
-                allProcesses = isSortedAscending
-                    ? allProcesses.OrderBy(p => p.ProcessId).ToList()
-                    : allProcesses.OrderByDescending(p => p.ProcessId).ToList();
 
-                ProcessListView.ItemsSource = allProcesses;
+                ProcessListView.ItemsSource = null;
+
+                if (isSortedAscending)
+                    allProcesses.Sort((a, b) => a.ProcessId.CompareTo(b.ProcessId));
+                else
+                    allProcesses.Sort((a, b) => b.ProcessId.CompareTo(a.ProcessId));
+
+                    ProcessListView.ItemsSource = allProcesses;
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
             }
             catch (Exception ex)
             {
@@ -98,11 +113,17 @@ namespace Plantilla.Pages.Processes
 
             try
             {
-                allProcesses = isSortedAscending
-                    ? allProcesses.OrderBy(p => p.ProcessName).ToList()
-                    : allProcesses.OrderByDescending(p => p.ProcessName).ToList();
+                ProcessListView.ItemsSource = null;
+
+                if (isSortedAscending)
+                    allProcesses.Sort((a, b) => a.ProcessId.CompareTo(b.ProcessName));
+                else
+                    allProcesses.Sort((a, b) => b.ProcessId.CompareTo(a.ProcessName));
 
                 ProcessListView.ItemsSource = allProcesses;
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
             }
             catch (Exception ex)
             {

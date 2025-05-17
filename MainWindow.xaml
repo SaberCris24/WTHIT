@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Plantilla"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dev="using:DevWinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Plantilla">
@@ -14,44 +15,46 @@
             <RowDefinition />
         </Grid.RowDefinitions>
 
-        <TitleBar Name = "AppTitleBar"
-            IsBackButtonVisible="False"
-            IsPaneToggleButtonVisible="False"/>
-    
-    <NavigationView x:Name="NavView" 
-                    PaneDisplayMode="Left"
-                    IsPaneOpen="False"
-                    Grid.Row = "1"
-                    OpenPaneLength="200"
-                    CompactPaneLength="48"
-                    SelectionChanged="NavView_SelectionChanged"
-                    IsBackButtonVisible="Collapsed"
-                    IsPaneToggleButtonVisible="True"
-                    IsSettingsVisible="True">
+        <TitleBar Name="AppTitleBar"
+                  Title="WTHIT"
+                  IsBackButtonVisible="False"
+                  IsPaneToggleButtonVisible="False"
+                  IconSource="{dev:BitmapIconSource Source=Assets/icon.png}"/>
+
+        <NavigationView x:Name="NavView" 
+                        PaneDisplayMode="Left"
+                        IsPaneOpen="False"
+                        Grid.Row="1"
+                        OpenPaneLength="200"
+                        CompactPaneLength="48"
+                        SelectionChanged="NavView_SelectionChanged"
+                        IsBackButtonVisible="Collapsed"
+                        IsPaneToggleButtonVisible="True"
+                        IsSettingsVisible="True">
           
-        <NavigationView.MenuItems>  
-            <NavigationViewItem x:Name="ProcessesItem"
-                              Content="Processes"
-                              Tag="processes"
-                              IsSelected="True">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE7F8;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-        </NavigationView.MenuItems>
+            <NavigationView.MenuItems>  
+                <NavigationViewItem x:Name="ProcessesItem"
+                                  Content="Processes"
+                                  Tag="processes"
+                                  IsSelected="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7F8;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
 
-        <NavigationView.FooterMenuItems>
-            <NavigationViewItem x:Name="AboutItem"
-                              Content="About"
-                              Tag="about">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE946;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-        </NavigationView.FooterMenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem x:Name="AboutItem"
+                                  Content="About"
+                                  Tag="about">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE946;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
 
-        <Frame x:Name="contentFrame"/>
-    </NavigationView>
+            <Frame x:Name="contentFrame"/>
+        </NavigationView>
 
     </Grid>
 </Window>

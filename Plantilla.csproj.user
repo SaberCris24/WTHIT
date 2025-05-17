@@ -1,6 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup />
+  <PropertyGroup>
+    <AppIconSource>C:\Users\jerem\Documents\Code\WTHIT\Assets\icon.png</AppIconSource>
+    <PackageLogoSource>C:\Users\jerem\Documents\Code\WTHIT\Assets\icon1024.png</PackageLogoSource>
+    <ActiveDebugProfile>Plantilla (Unpackaged)</ActiveDebugProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
   <ItemGroup>
     <None Update="App.xaml">
       <SubType>Designer</SubType>

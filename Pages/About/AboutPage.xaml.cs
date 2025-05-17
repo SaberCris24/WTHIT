@@ -7,6 +7,7 @@ namespace Plantilla.Pages.About
         public AboutPage()
         {
             this.InitializeComponent();
+            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
         }
     }
 }

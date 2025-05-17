@@ -25,6 +25,8 @@ namespace Plantilla.Pages.Processes
             "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system"
         };
 
+        private List<ProcessItem> allProcesses; // Static to persist across navigations
+
         public bool IsProcessSelected
         {
             get => _isProcessSelected;
@@ -43,9 +45,48 @@ namespace Plantilla.Pages.Processes
         public ProcessesPage()
         {
             this.InitializeComponent();
+            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
             Processes = new ObservableCollection<ProcessItem>();
             ProcessListView.ItemsSource = Processes;
-            LoadProcesses();
+
+            if (allProcesses == null)
+            {
+                allProcesses = new List<ProcessItem>();
+                LoadProcessesToAll();
+            }
+            else
+            {
+                RefreshProcessesFromAll();
+            }
+
+            this.Loaded += (s, e) => LoadProcesses();
+        }
+
+        private void LoadProcessesToAll()
+        {
+            allProcesses.Clear();
+            foreach (Process process in Process.GetProcesses())
+            {
+                allProcesses.Add(new ProcessItem
+                {
+                    ProcessName = process.ProcessName,
+                    ProcessId = process.Id,
+                    ApplicationRelated = GetApplicationInfo(process),
+                    VirusStatus = "Not Scanned",
+                    Information = "Click to view details",
+                    IsSelected = false
+                });
+            }
+            RefreshProcessesFromAll();
+        }
+
+        private void RefreshProcessesFromAll()
+        {
+            Processes.Clear();
+            foreach (var item in allProcesses)
+            {
+                Processes.Add(item);
+            }
         }
 
         private void LoadProcesses()
@@ -323,34 +364,44 @@ namespace Plantilla.Pages.Processes
 
         private void OrderBy_Name(object sender, RoutedEventArgs e)
         {
-            var ordered = _isNameSortAscending 
-                ? Processes.OrderBy(p => p.ProcessName).ToList()
-                : Processes.OrderByDescending(p => p.ProcessName).ToList();
+            if (_isNameSortAscending)
+                allProcesses.Sort((a, b) => string.Compare(a.ProcessName, b.ProcessName, StringComparison.OrdinalIgnoreCase));
+            else
+                allProcesses.Sort((a, b) => string.Compare(b.ProcessName, a.ProcessName, StringComparison.OrdinalIgnoreCase));
 
             _isNameSortAscending = !_isNameSortAscending;
             SortByNameIcon_Name.Glyph = _isNameSortAscending ? "\uE70D" : "\uE70E";
 
             Processes.Clear();
-            foreach (var process in ordered)
+            foreach (var process in allProcesses)
             {
                 Processes.Add(process);
             }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
         }
 
         private void OrderBy_Id(object sender, RoutedEventArgs e)
         {
-            var ordered = _isIdSortAscending
-                ? Processes.OrderBy(p => p.ProcessId).ToList()
-                : Processes.OrderByDescending(p => p.ProcessId).ToList();
+            if (_isIdSortAscending)
+                allProcesses.Sort((a, b) => a.ProcessId.CompareTo(b.ProcessId));
+            else
+                allProcesses.Sort((a, b) => b.ProcessId.CompareTo(a.ProcessId));
 
             _isIdSortAscending = !_isIdSortAscending;
             SortByNameIcon_Id.Glyph = _isIdSortAscending ? "\uE70D" : "\uE70E";
 
             Processes.Clear();
-            foreach (var process in ordered)
+            foreach (var process in allProcesses)
             {
                 Processes.Add(process);
             }
+            
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
         }
 
         private void ProcessCheckBox_Checked(object sender, RoutedEventArgs e)

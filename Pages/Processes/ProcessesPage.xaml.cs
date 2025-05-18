@@ -10,6 +10,9 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Plantilla.Pages.Processes
 {
@@ -310,19 +313,38 @@ namespace Plantilla.Pages.Processes
             LoadProcesses();
         }
 
-        private void ScanButton_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedProcesses = Processes.Where(p => p.IsSelected).ToList();
-            if (selectedProcesses.Any())
-            {
-                foreach (var process in selectedProcesses)
-                {
-                    process.VirusStatus = "Scanning...";
-                }
+        private const string VirusTotalApiKey = "1234"; // Here the api key
 
-                ShowSuccess($"Started scanning {selectedProcesses.Count} process(es).");
+private async void ScanButton_Click(object sender, RoutedEventArgs e)
+{
+    var selectedProcesses = Processes.Where(p => p.IsSelected).ToList();
+    if (selectedProcesses.Any())
+    {
+        foreach (var process in selectedProcesses)
+        {
+            process.VirusStatus = "Scanning...";
+            try
+            {
+                var proc = Process.GetProcessById(process.ProcessId);
+                var path = proc.MainModule?.FileName;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    process.VirusStatus = await GetVirusTotalReportAsync(path, VirusTotalApiKey);
+                }
+                else
+                {
+                    process.VirusStatus = "No file path";
+                }
+            }
+            catch (Exception ex)
+            {
+                process.VirusStatus = $"Error: {ex.Message}";
             }
         }
+
+        ShowSuccess($"Scanned {selectedProcesses.Count} process(es).");
+    }
+}
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
         {
@@ -432,11 +454,120 @@ namespace Plantilla.Pages.Processes
             }
         }
 
-        private void ViewDetails_Click(object sender, RoutedEventArgs e)
+        
+
+        private async Task<string> GetVirusTotalReportAsync(string filePath, string apiKey)
+        {
+            try
+            {
+                using var sha256 = SHA256.Create();
+                using var stream = File.OpenRead(filePath);
+                var hashBytes = sha256.ComputeHash(stream);
+                var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("x-apikey", apiKey);
+                var url = $"https://www.virustotal.com/api/v3/files/{hash}";
+                var response = await client.GetAsync(url);
+
+                if (!response.IsSuccessStatusCode)
+                    return "Not found on VT";
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var stats = doc.RootElement
+                    .GetProperty("data")
+                    .GetProperty("attributes")
+                    .GetProperty("last_analysis_stats");
+
+                int malicious = stats.GetProperty("malicious").GetInt32();
+                int undetected = stats.GetProperty("undetected").GetInt32();
+
+                return $"Malicious: {malicious}, Undetected: {undetected}";
+            }
+            catch (Exception ex)
+            {
+                return $"VT Error: {ex.Message}";
+            }
+        }
+
+        private async Task<string> GetVirusTotalDetailsAsync(string filePath, string apiKey)
+        {
+            try
+            {
+                using var sha256 = SHA256.Create();
+                using var stream = File.OpenRead(filePath);
+                var hashBytes = sha256.ComputeHash(stream);
+                var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("x-apikey", apiKey);
+                var url = $"https://www.virustotal.com/api/v3/files/{hash}";
+                var response = await client.GetAsync(url);
+
+                if (!response.IsSuccessStatusCode)
+                    return "No VirusTotal info found.";
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var attr = doc.RootElement.GetProperty("data").GetProperty("attributes");
+
+                string name = attr.TryGetProperty("meaningful_name", out var n) ? n.GetString() : null;
+                string type = attr.TryGetProperty("type_description", out var t) ? t.GetString() : null;
+                string desc = attr.TryGetProperty("description", out var d) ? d.GetString() : null;
+                string tags = attr.TryGetProperty("tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
+                    ? string.Join(", ", tagsProp.EnumerateArray().Select(x => x.GetString()))
+                    : null;
+                string altName = attr.TryGetProperty("names", out var namesProp) && namesProp.ValueKind == JsonValueKind.Array && namesProp.GetArrayLength() > 0
+                    ? namesProp[0].GetString()
+                    : null;
+
+                // Fallback if description is missing
+                if (string.IsNullOrWhiteSpace(desc))
+                {
+                    desc = altName ?? "N/A";
+                }
+
+                return $"Name: {name ?? "N/A"}\nType: {type ?? "N/A"}\nDescription: {desc}\nTags: {tags ?? "N/A"}";
+            }
+            catch (Exception ex)
+            {
+                return $"VT Error: {ex.Message}";
+            }
+        }
+
+        private async void ViewDetails_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.DataContext is ProcessItem process)
             {
-                ShowSuccess($"Process Details - Name: {process.ProcessName} (ID: {process.ProcessId})");
+                try
+                {
+                    var proc = Process.GetProcessById(process.ProcessId);
+                    string path = null;
+                    try
+                    {
+                        path = proc.MainModule?.FileName;
+                    }
+                    catch
+                    {
+                        ShowError("Access denied to process file.");
+                        return;
+                    }
+
+                    if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                    {
+                        var info = await GetVirusTotalDetailsAsync(path, VirusTotalApiKey);
+                        ShowSuccess(info);
+                    }
+                    else
+                    {
+                        ShowError("No file path available.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Error: {ex.Message}");
+                }
             }
         }
     }

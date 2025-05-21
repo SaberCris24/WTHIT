@@ -7,7 +7,6 @@ using WinRT.Interop;
 using Plantilla.Pages.About;
 using Plantilla.Pages.Processes;
 using Plantilla.Pages.Settings;
-
 namespace Plantilla
 {
     public sealed partial class MainWindow : Window

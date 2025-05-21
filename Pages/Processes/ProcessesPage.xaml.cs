@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Plantilla.Services;
 
 namespace Plantilla.Pages.Processes
 {
@@ -30,6 +31,7 @@ namespace Plantilla.Pages.Processes
 
         private List<ProcessItem> allProcesses;
         private static bool _processesLoaded = false;
+        private DatabaseService _databaseService = new DatabaseService();
 
         public bool IsProcessSelected
         {
@@ -52,6 +54,9 @@ namespace Plantilla.Pages.Processes
             this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
             Processes = new ObservableCollection<ProcessItem>();
             ProcessListView.ItemsSource = Processes;
+
+            // Initialize database
+            _ = _databaseService.InitializeAsync();
 
             if (allProcesses == null)
             {
@@ -138,13 +143,13 @@ namespace Plantilla.Pages.Processes
         {
             try
             {
-                // Verificar cache primero
+                // Check cache first
                 if (_processCache.TryGetValue(process.ProcessName, out string cachedInfo))
                 {
                     return cachedInfo;
                 }
 
-                // Para procesos del sistema, devolver rápidamente
+                // For system processes, return quickly
                 if (_systemProcesses.Contains(process.ProcessName))
                 {
                     var result = $"Windows {process.ProcessName}";
@@ -159,19 +164,19 @@ namespace Plantilla.Pages.Processes
                     string processPath = process.MainModule?.FileName ?? string.Empty;
                     if (!string.IsNullOrEmpty(processPath))
                     {
-                        // Intentar obtener información del registro para Store Apps
+                        // Try to get info from registry for Store Apps
                         if (processPath.Contains("WindowsApps"))
                         {
                             appInfo = GetStoreAppName(processPath);
                         }
                         else
                         {
-                            // Obtener información del ejecutable
+                            // Get info from executable
                             var versionInfo = FileVersionInfo.GetVersionInfo(processPath);
                             appInfo = GetBestAppName(versionInfo, processPath);
                         }
 
-                        // Intentar obtener información adicional del registro
+                        // Try to get additional info from registry
                         var registryInfo = GetRegistryAppInfo(process.ProcessName);
                         if (!string.IsNullOrEmpty(registryInfo))
                         {
@@ -181,11 +186,11 @@ namespace Plantilla.Pages.Processes
                 }
                 catch
                 {
-                    // Si falla el acceso al proceso, intentar con el registro
+                    // If process access fails, try registry
                     appInfo = GetRegistryAppInfo(process.ProcessName) ?? "System Process";
                 }
 
-                // Guardar en cache
+                // Save to cache
                 _processCache[process.ProcessName] = appInfo;
                 return appInfo;
             }
@@ -197,7 +202,6 @@ namespace Plantilla.Pages.Processes
 
         private string GetBestAppName(FileVersionInfo versionInfo, string processPath)
         {
-            // Intentar obtener el mejor nombre disponible en orden de preferencia
             return new[]
             {
                 versionInfo.ProductName,
@@ -218,8 +222,7 @@ namespace Plantilla.Pages.Processes
                 {
                     var appPart = pathParts[appIndex + 1];
                     var namePart = appPart.Split('_')[0];
-                    
-                    // Intentar obtener el nombre amigable del registro
+
                     using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families\" + namePart))
                     {
                         if (key?.GetValue("DisplayName") is string displayName)
@@ -227,13 +230,12 @@ namespace Plantilla.Pages.Processes
                             return displayName;
                         }
                     }
-                    
-                    // Si no se encuentra en el registro, formatear el nombre del paquete
+
                     return $"Store: {FormatAppName(namePart)}";
                 }
             }
             catch { }
-            
+
             return "Windows Store App";
         }
 
@@ -241,7 +243,6 @@ namespace Plantilla.Pages.Processes
         {
             try
             {
-                // Buscar en diferentes ubicaciones del registro
                 var registryPaths = new[]
                 {
                     @"Software\Microsoft\Windows\CurrentVersion\App Paths\",
@@ -264,7 +265,7 @@ namespace Plantilla.Pages.Processes
                                 var displayName = key.GetValue("DisplayName") as string;
                                 var exeName = Path.GetFileNameWithoutExtension(keyName);
 
-                                if (!string.IsNullOrEmpty(displayName) && 
+                                if (!string.IsNullOrEmpty(displayName) &&
                                     exeName.Equals(processName, StringComparison.OrdinalIgnoreCase))
                                 {
                                     return displayName;
@@ -315,36 +316,36 @@ namespace Plantilla.Pages.Processes
 
         private const string VirusTotalApiKey = "1234"; // Here the api key
 
-private async void ScanButton_Click(object sender, RoutedEventArgs e)
-{
-    var selectedProcesses = Processes.Where(p => p.IsSelected).ToList();
-    if (selectedProcesses.Any())
-    {
-        foreach (var process in selectedProcesses)
+        private async void ScanButton_Click(object sender, RoutedEventArgs e)
         {
-            process.VirusStatus = "Scanning...";
-            try
+            var selectedProcesses = Processes.Where(p => p.IsSelected).ToList();
+            if (selectedProcesses.Any())
             {
-                var proc = Process.GetProcessById(process.ProcessId);
-                var path = proc.MainModule?.FileName;
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                foreach (var process in selectedProcesses)
                 {
-                    process.VirusStatus = await GetVirusTotalReportAsync(path, VirusTotalApiKey);
+                    process.VirusStatus = "Scanning...";
+                    try
+                    {
+                        var proc = Process.GetProcessById(process.ProcessId);
+                        var path = proc.MainModule?.FileName;
+                        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                        {
+                            process.VirusStatus = await GetVirusTotalReportAsync(path, VirusTotalApiKey);
+                        }
+                        else
+                        {
+                            process.VirusStatus = "No file path";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        process.VirusStatus = $"Error: {ex.Message}";
+                    }
                 }
-                else
-                {
-                    process.VirusStatus = "No file path";
-                }
-            }
-            catch (Exception ex)
-            {
-                process.VirusStatus = $"Error: {ex.Message}";
+
+                ShowSuccess($"Scanned {selectedProcesses.Count} process(es).");
             }
         }
-
-        ShowSuccess($"Scanned {selectedProcesses.Count} process(es).");
-    }
-}
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
         {
@@ -404,15 +405,7 @@ private async void ScanButton_Click(object sender, RoutedEventArgs e)
             _isNameSortAscending = !_isNameSortAscending;
             SortByNameIcon_Name.Glyph = _isNameSortAscending ? "\uE70D" : "\uE70E";
 
-            Processes.Clear();
-            foreach (var process in allProcesses)
-            {
-                Processes.Add(process);
-            }
-
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
+            RefreshProcessesFromAll();
         }
 
         private void OrderBy_Id(object sender, RoutedEventArgs e)
@@ -425,15 +418,7 @@ private async void ScanButton_Click(object sender, RoutedEventArgs e)
             _isIdSortAscending = !_isIdSortAscending;
             SortByNameIcon_Id.Glyph = _isIdSortAscending ? "\uE70D" : "\uE70E";
 
-            Processes.Clear();
-            foreach (var process in allProcesses)
-            {
-                Processes.Add(process);
-            }
-            
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
+            RefreshProcessesFromAll();
         }
 
         private void ProcessCheckBox_Checked(object sender, RoutedEventArgs e)
@@ -453,8 +438,6 @@ private async void ScanButton_Click(object sender, RoutedEventArgs e)
                 ShowSuccess($"Process: {process.ProcessName} (ID: {process.ProcessId})");
             }
         }
-
-        
 
         private async Task<string> GetVirusTotalReportAsync(string filePath, string apiKey)
         {
@@ -522,7 +505,6 @@ private async void ScanButton_Click(object sender, RoutedEventArgs e)
                     ? namesProp[0].GetString()
                     : null;
 
-                // Fallback if description is missing
                 if (string.IsNullOrWhiteSpace(desc))
                 {
                     desc = altName ?? "N/A";
@@ -542,31 +524,83 @@ private async void ScanButton_Click(object sender, RoutedEventArgs e)
             {
                 try
                 {
-                    var proc = Process.GetProcessById(process.ProcessId);
-                    string path = null;
-                    try
+                    var currentWindow = App.MainWindow;
+                    if (currentWindow == null)
                     {
-                        path = proc.MainModule?.FileName;
-                    }
-                    catch
-                    {
-                        ShowError("Access denied to process file.");
+                        ShowError("Cannot show dialog - Window is null");
                         return;
                     }
 
-                    if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                    string path;
+                    string processDescription;
+
+                    try
                     {
-                        var info = await GetVirusTotalDetailsAsync(path, VirusTotalApiKey);
-                        ShowSuccess(info);
+                        var proc = Process.GetProcessById(process.ProcessId);
+                        path = proc.MainModule?.FileName ?? "Path not available";
+                        processDescription = proc.MainModule?.FileVersionInfo?.FileDescription ?? "Description not available";
                     }
-                    else
+                    catch (Exception)
                     {
-                        ShowError("No file path available.");
+                        path = "Access denied";
+                        processDescription = "Protected process";
                     }
+
+                    // Obtener información de la base de datos
+                    var processInfo = await _databaseService.GetProcessInfoAsync(process.ProcessName);
+
+                    var dialog = new ContentDialog
+                    {
+                        Title = "Process Details",
+                        PrimaryButtonText = "Close",
+                        DefaultButton = ContentDialogButton.Primary,
+                        XamlRoot = currentWindow.Content.XamlRoot, // Usar el XamlRoot de la ventana principal
+                        Content = new StackPanel
+                        {
+                            Spacing = 10,
+                            Padding = new Thickness(10),
+                            Children =
+                            {
+                                new TextBlock 
+                                { 
+                                    Text = $"Process Name: {process.ProcessName}",
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                new TextBlock 
+                                { 
+                                    Text = $"Process ID: {process.ProcessId}",
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                new TextBlock 
+                                { 
+                                    Text = $"Application Related: {(processInfo?.ApplicationRelated ?? process.ApplicationRelated ?? "Not available")}",
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                new TextBlock 
+                                { 
+                                    Text = $"File Location: {(processInfo?.FileLocation ?? path)}",
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                new TextBlock 
+                                { 
+                                    Text = $"What is Doing this process: {(processInfo?.Description ?? "Not information yet")}",
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                new TextBlock 
+                                { 
+                                    Text = $"Is this process CPU intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}",
+                                    TextWrapping = TextWrapping.Wrap
+                                }
+                            }
+                        }
+                    };
+
+                    await dialog.ShowAsync();
                 }
                 catch (Exception ex)
                 {
                     ShowError($"Error: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"ViewDetails error: {ex}");
                 }
             }
         }

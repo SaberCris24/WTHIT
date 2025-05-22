@@ -578,7 +578,7 @@ namespace Plantilla.Pages.Processes
                                 },
                                 new TextBlock 
                                 { 
-                                    Text = $"File Location: {(processInfo?.FileLocation ?? path)}",
+                                    Text = $"File Location: {(path)}",
                                     TextWrapping = TextWrapping.Wrap
                                 },
                                 new TextBlock 
@@ -588,7 +588,7 @@ namespace Plantilla.Pages.Processes
                                 },
                                 new TextBlock 
                                 { 
-                                    Text = $"Is this process CPU intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}",
+                                    Text = $"Is this process resource intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}",
                                     TextWrapping = TextWrapping.Wrap
                                 }
                             }

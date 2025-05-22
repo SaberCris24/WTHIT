@@ -8,7 +8,7 @@ namespace Plantilla.Services
 {
     public class DatabaseService
     {
-        private SQLiteAsyncConnection _database;
+        private static SQLiteAsyncConnection? _database;
         private static readonly string dbName = "ProcessInfo.db";
         // Incrementar este número cada vez que se modifique la info.
         private const int CURRENT_DATA_VERSION = 1;
@@ -49,7 +49,7 @@ namespace Plantilla.Services
 
         
 
-        public async Task<ProcessInfo> GetProcessInfoAsync(string processName)
+        public async Task<ProcessInfo?> GetProcessInfoAsync(string processName)
         {
             try
             {

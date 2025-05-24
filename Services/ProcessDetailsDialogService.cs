@@ -1,5 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -67,27 +70,102 @@ namespace Plantilla.Services
             string path,
             XamlRoot xamlRoot)
         {
+            var mainPanel = new Grid();
+            
+            // Create a header grid to contain both title and button
+            var headerGrid = new Grid();
+            
+            // Create columns for the header grid
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            // Create title text block
+            var titleBlock = new TextBlock
+            {
+                Text = "Process Details",
+                Style = Application.Current.Resources["TitleTextBlockStyle"] as Style,
+                Margin = new Thickness(0, 0, 10, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            // Create the VirusTotal info button
+            var vtButton = new Button
+            {
+                Content = new FontIcon 
+                { 
+                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                    Glyph = "\uE946",
+                    FontSize = 16
+                },
+                Width = 32,
+                Height = 32,
+                Padding = new Thickness(0),
+                Margin = new Thickness(0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            // Setup the flyout
+            var flyout = new Flyout();
+            var flyoutContent = new StackPanel
+            {
+                Padding = new Thickness(10),
+                MaxWidth = 400
+            };
+
+            var vtTitle = new TextBlock
+            {
+                Text = "VirusTotal Information",
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            var vtInfo = new TextBlock
+            {
+                Text = process.Information ?? "No VirusTotal information available",
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            flyoutContent.Children.Add(vtTitle);
+            flyoutContent.Children.Add(vtInfo);
+            flyout.Content = flyoutContent;
+            vtButton.Flyout = flyout;
+
+            // Add title and button to header grid
+            Grid.SetColumn(titleBlock, 0);
+            Grid.SetColumn(vtButton, 1);
+            headerGrid.Children.Add(titleBlock);
+            headerGrid.Children.Add(vtButton);
+
+            // Create the main content
+            var contentPanel = new StackPanel
+            {
+                Spacing = 10,
+                Padding = new Thickness(10),
+                Margin = new Thickness(0)
+            };
+
+            // Add the details
+            contentPanel.Children.Add(CreateDetailTextBlock($"Process Name: {process.ProcessName}"));
+            contentPanel.Children.Add(CreateDetailTextBlock($"Process ID: {process.ProcessId}"));
+            contentPanel.Children.Add(CreateDetailTextBlock($"Application Related: {(processInfo?.ApplicationRelated ?? process.ApplicationRelated ?? "Not available")}"));
+            contentPanel.Children.Add(CreateDetailTextBlock($"File Location: {path}"));
+            contentPanel.Children.Add(CreateDetailTextBlock($"What is Doing this process: {(processInfo?.Description ?? "Not information yet")}"));
+            contentPanel.Children.Add(CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}"));
+
             return new ContentDialog
             {
-                Title = "Process Details",
-                PrimaryButtonText = "Close",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = xamlRoot,
+                // Use the custom header grid instead of Title property
                 Content = new StackPanel
                 {
-                    Spacing = 10,
-                    Padding = new Thickness(10),
                     Children =
                     {
-                        CreateDetailTextBlock($"Process Name: {process.ProcessName}"),
-                        CreateDetailTextBlock($"Process ID: {process.ProcessId}"),
-                        CreateDetailTextBlock($"Application Related: {(processInfo?.ApplicationRelated ?? process.ApplicationRelated ?? "Not available")}"),
-                        CreateDetailTextBlock($"File Location: {path}"),
-                        CreateDetailTextBlock($"What is Doing this process: {(processInfo?.Description ?? "Not information yet")}"),
-                        CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}"),
-                        CreateDetailTextBlock($"Virus Total Information:\n{process.Information}")
+                        headerGrid,
+                        contentPanel
                     }
-                }
+                },
+                PrimaryButtonText = "Close",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = xamlRoot
             };
         }
 

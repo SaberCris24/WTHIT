@@ -72,7 +72,6 @@ namespace Plantilla.Services
 
                 string name = attr.TryGetProperty("meaningful_name", out var n) ? n.GetString() : null;
                 string type = attr.TryGetProperty("type_description", out var t) ? t.GetString() : null;
-                string desc = attr.TryGetProperty("description", out var d) ? d.GetString() : null;
                 string tags = attr.TryGetProperty("tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
                     ? string.Join(", ", tagsProp.EnumerateArray().Select(x => x.GetString()))
                     : null;
@@ -80,12 +79,7 @@ namespace Plantilla.Services
                     ? namesProp[0].GetString()
                     : null;
 
-                if (string.IsNullOrWhiteSpace(desc))
-                {
-                    desc = altName ?? "N/A";
-                }
-
-                return $"Name: {name ?? "N/A"}\nType: {type ?? "N/A"}\nDescription: {desc}\nTags: {tags ?? "N/A"}";
+                return $"Name: {name ?? "N/A"}\nType: {type ?? "N/A"}\nTags: {tags ?? "N/A"}";
             }
             catch (Exception ex)
             {

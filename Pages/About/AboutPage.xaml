@@ -33,7 +33,7 @@
         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="4"
                 Margin="80,0,80,8">
-            <toolkit:SettingsExpander Description="© 2025 Geriberto. All rights reserved."
+            <toolkit:SettingsExpander Description="Coded With Soul by Cristian Florez and Jeremy Machado."
                                     Header="WTHIT"
                                     Margin="16,16,16,16">
                 <toolkit:SettingsExpander.HeaderIcon>

@@ -68,7 +68,8 @@ namespace Plantilla.Services
             ProcessItem process, 
             ProcessInfo? processInfo, 
             string path,
-            XamlRoot xamlRoot)
+            XamlRoot xamlRoot
+            )
         {
             var mainPanel = new Grid();
             
@@ -101,6 +102,7 @@ namespace Plantilla.Services
                 Height = 32,
                 Padding = new Thickness(0),
                 Margin = new Thickness(0),
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
                 VerticalAlignment = VerticalAlignment.Center
             };
 
@@ -150,8 +152,7 @@ namespace Plantilla.Services
             contentPanel.Children.Add(CreateDetailTextBlock($"Application Related: {(processInfo?.ApplicationRelated ?? process.ApplicationRelated ?? "Not available")}"));
             contentPanel.Children.Add(CreateDetailTextBlock($"File Location: {path}"));
             contentPanel.Children.Add(CreateDetailTextBlock($"What is Doing this process: {(processInfo?.Description ?? "Not information yet")}"));
-            contentPanel.Children.Add(CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive == true ? "Yes" : "No")}"));
-
+            contentPanel.Children.Add(CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive ?? "No information available")}"));
             return new ContentDialog
             {
                 // Use the custom header grid instead of Title property
@@ -165,7 +166,8 @@ namespace Plantilla.Services
                 },
                 PrimaryButtonText = "Close",
                 DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = xamlRoot
+                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
+                XamlRoot = xamlRoot,
             };
         }
 

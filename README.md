@@ -15,6 +15,11 @@ Unlike a traditional Task Manager, WTHIT is focused on **learning**. It's design
 
 ---
 
+## 🖼️ Screenshots
+![image](https://github.com/user-attachments/assets/e7bdd045-5b13-47e8-9cd2-6ca638ff3fb7)
+![image](https://github.com/user-attachments/assets/96e69337-a1e5-40ab-8c7e-39e60efc2884)
+
+
 ## ✨ Features
 
 - 🧠 **Educational insights** about system processes

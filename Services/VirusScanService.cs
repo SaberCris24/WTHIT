@@ -8,17 +8,34 @@ using System.Linq;
 
 namespace Plantilla.Services
 {
+    /// <summary>
+    /// Interface for virus scanning operations
+    /// </summary>
     public interface IVirusScanService
     {
+        /// <summary>
+        /// Gets basic scan report from VirusTotal
+        /// </summary>
         Task<string> GetVirusTotalReportAsync(string filePath);
+
+        /// <summary>
+        /// Gets detailed file information from VirusTotal
+        /// </summary>
         Task<string> GetVirusTotalDetailsAsync(string filePath);
     }
 
+    /// <summary>
+    /// Service for scanning files using VirusTotal API
+    /// </summary>
     public class VirusScanService : IVirusScanService
     {
+        // API key and HTTP client for VirusTotal
         private readonly string _apiKey;
         private readonly HttpClient _httpClient;
 
+        /// <summary>
+        /// Creates new instance with VirusTotal API key
+        /// </summary>
         public VirusScanService(string apiKey)
         {
             _apiKey = apiKey;
@@ -26,10 +43,14 @@ namespace Plantilla.Services
             _httpClient.DefaultRequestHeaders.Add("x-apikey", _apiKey);
         }
 
+        /// <summary>
+        /// Gets basic malware scan report
+        /// </summary>
         public async Task<string> GetVirusTotalReportAsync(string filePath)
         {
             try
             {
+                // Calculate file hash and get report
                 var hash = await GetFileHashAsync(filePath);
                 var url = $"https://www.virustotal.com/api/v3/files/{hash}";
                 var response = await _httpClient.GetAsync(url);
@@ -37,6 +58,7 @@ namespace Plantilla.Services
                 if (!response.IsSuccessStatusCode)
                     return "Not found on VT";
 
+                // Parse response and get statistics
                 var json = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
                 var stats = doc.RootElement
@@ -55,10 +77,14 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Gets detailed file analysis information
+        /// </summary>
         public async Task<string> GetVirusTotalDetailsAsync(string filePath)
         {
             try
             {
+                // Get file details from VirusTotal
                 var hash = await GetFileHashAsync(filePath);
                 var url = $"https://www.virustotal.com/api/v3/files/{hash}";
                 var response = await _httpClient.GetAsync(url);
@@ -66,10 +92,12 @@ namespace Plantilla.Services
                 if (!response.IsSuccessStatusCode)
                     return "No VirusTotal info found.";
 
+                // Extract file information
                 var json = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
                 var attr = doc.RootElement.GetProperty("data").GetProperty("attributes");
 
+                // Get various file properties
                 string name = attr.TryGetProperty("meaningful_name", out var n) ? n.GetString() : null;
                 string type = attr.TryGetProperty("type_description", out var t) ? t.GetString() : null;
                 string tags = attr.TryGetProperty("tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
@@ -87,6 +115,9 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Calculates SHA256 hash of a file
+        /// </summary>
         private async Task<string> GetFileHashAsync(string filePath)
         {
             using var sha256 = SHA256.Create();

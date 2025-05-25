@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Text;
 using System;
@@ -11,22 +10,37 @@ using Plantilla.Models;
 
 namespace Plantilla.Services
 {
+    /// <summary>
+    /// Interface for displaying process details in dialogs
+    /// </summary>
     public interface IProcessDetailsDialogService
     {
+        /// <summary>
+        /// Shows process information in a dialog
+        /// </summary>
         Task ShowProcessDetailsAsync(ProcessItem process, XamlRoot xamlRoot);
     }
 
+    /// <summary>
+    /// Handles the display of process details in a WinUI dialog
+    /// </summary>
     public class ProcessDetailsDialogService : IProcessDetailsDialogService
     {
         private readonly IVirusScanService _virusScanService;
         private readonly DatabaseService _databaseService;
 
+        /// <summary>
+        /// Creates a new instance with required services
+        /// </summary>
         public ProcessDetailsDialogService(IVirusScanService virusScanService, DatabaseService databaseService)
         {
             _virusScanService = virusScanService;
             _databaseService = databaseService;
         }
 
+        /// <summary>
+        /// Shows the process details dialog
+        /// </summary>
         public async Task ShowProcessDetailsAsync(ProcessItem process, XamlRoot xamlRoot)
         {
             try
@@ -48,6 +62,9 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Gets the process path and description
+        /// </summary>
         private async Task<(string path, string description)> GetProcessPathAndDescription(int processId)
         {
             try
@@ -64,6 +81,9 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Creates the dialog UI with process information
+        /// </summary>
         private ContentDialog CreateProcessDetailsDialog(
             ProcessItem process, 
             ProcessInfo? processInfo, 
@@ -155,7 +175,6 @@ namespace Plantilla.Services
             contentPanel.Children.Add(CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive ?? "No information available")}"));
             return new ContentDialog
             {
-                // Use the custom header grid instead of Title property
                 Content = new StackPanel
                 {
                     Children =
@@ -171,6 +190,9 @@ namespace Plantilla.Services
             };
         }
 
+        /// <summary>
+        /// Creates a text block for showing details
+        /// </summary>
         private static TextBlock CreateDetailTextBlock(string text)
         {
             return new TextBlock

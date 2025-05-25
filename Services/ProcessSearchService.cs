@@ -5,15 +5,35 @@ using Plantilla.Models;
 
 namespace Plantilla.Services
 {
+    /// <summary>
+    /// Interface for searching and sorting processes
+    /// </summary>
     public interface IProcessSearchService
     {
+        /// <summary>
+        /// Searches processes based on text
+        /// </summary>
         IEnumerable<ProcessItem> SearchProcesses(IEnumerable<ProcessItem> processes, string searchText);
+
+        /// <summary>
+        /// Gets search suggestions from process names
+        /// </summary>
         List<string> GetSearchSuggestions(IEnumerable<ProcessItem> processes, string searchText, int maxSuggestions = 5);
+
+        /// <summary>
+        /// Sorts processes by specified criteria
+        /// </summary>
         IEnumerable<ProcessItem> SortProcesses(IEnumerable<ProcessItem> processes, string sortBy, bool ascending);
     }
 
+    /// <summary>
+    /// Service for searching and sorting processes
+    /// </summary>
     public class ProcessSearchService : IProcessSearchService
     {
+        /// <summary>
+        /// Filters processes based on search text
+        /// </summary>
         public IEnumerable<ProcessItem> SearchProcesses(IEnumerable<ProcessItem> processes, string searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
@@ -27,6 +47,9 @@ namespace Plantilla.Services
             );
         }
 
+        /// <summary>
+        /// Gets process name suggestions based on input text
+        /// </summary>
         public List<string> GetSearchSuggestions(IEnumerable<ProcessItem> processes, string searchText, int maxSuggestions = 5)
         {
             if (string.IsNullOrWhiteSpace(searchText))
@@ -42,6 +65,9 @@ namespace Plantilla.Services
                 .ToList();
         }
 
+        /// <summary>
+        /// Sorts processes by name, ID, or application
+        /// </summary>
         public IEnumerable<ProcessItem> SortProcesses(IEnumerable<ProcessItem> processes, string sortBy, bool ascending)
         {
             IOrderedEnumerable<ProcessItem> sortedProcesses = sortBy.ToLower() switch

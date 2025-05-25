@@ -1,14 +1,21 @@
 namespace Plantilla.Models
 {
+    /// <summary>
+    /// Model class for representing process information with change notification
+    /// </summary>
     public class ProcessItem : System.ComponentModel.INotifyPropertyChanged
     {
+        // Private fields for properties with change notification
         private bool _isSelected;
         private string _virusStatus;
 
         public string ProcessName { get; set; }
         public int ProcessId { get; set; }
         public string ApplicationRelated { get; set; }
-        
+
+        /// <summary>
+        /// Current virus scan status
+        /// </summary>
         public string VirusStatus
         {
             get => _virusStatus;
@@ -21,9 +28,12 @@ namespace Plantilla.Models
                 }
             }
         }
-        
+
         public string Information { get; set; }
-        
+
+        /// <summary>
+        /// Selection state of the process item
+        /// </summary>
         public bool IsSelected
         {
             get => _isSelected;
@@ -37,8 +47,14 @@ namespace Plantilla.Models
             }
         }
 
+        /// <summary>
+        /// Property change notification event
+        /// </summary>
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 
+        /// <summary>
+        /// Raises the PropertyChanged event
+        /// </summary>
         protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));

@@ -1,4 +1,4 @@
-# WTHIT – What The Heck Is That?
+# WTHIT – What The Hell Is This?
 
 **WTHIT** is an educational desktop app for Windows that helps users understand what's happening behind their system. It provides clear, human-readable explanations of background processes, enriched with collaborative information and optional security scanning via VirusTotal.
 
@@ -11,7 +11,7 @@
 
 Unlike a traditional Task Manager, WTHIT is focused on **learning**. It's designed for students, tech enthusiasts, and anyone who’s ever asked:
 
-> “What the heck is that process doing on my system?”
+> “What the hell is this process doing on my system?”
 
 ---
 

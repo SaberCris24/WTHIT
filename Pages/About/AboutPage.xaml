@@ -67,6 +67,8 @@
                                         Header="Dependencies &amp; references">
                         <StackPanel Margin="-12,0,0,0" 
                                   Orientation="Vertical">
+                            <HyperlinkButton Content="Windows App SDK" 
+                                           NavigateUri="https://github.com/microsoft/WindowsAppSDK/"/>
                             <HyperlinkButton Content="WinUI 3" 
                                            NavigateUri="https://github.com/microsoft/microsoft-ui-xaml"/>
                             <HyperlinkButton Content="DevWinUI" 

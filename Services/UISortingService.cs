@@ -1,50 +1,54 @@
 using Microsoft.UI.Xaml.Controls;
 using System;
-using System.Collections.Generic;
 
 namespace Plantilla.Services
 {
     /// <summary>
-    /// Servicio para manejar el estado y la lógica de ordenamiento en la UI
+    /// Service to handle UI sorting state and logic
     /// </summary>
     public interface IUISortingService
     {
         /// <summary>
-        /// Obtiene o establece si el ordenamiento por nombre está en orden ascendente
+        /// Gets or sets whether name sorting is in ascending order
         /// </summary>
         bool IsNameSortAscending { get; set; }
 
         /// <summary>
-        /// Obtiene o establece si el ordenamiento por ID está en orden ascendente
+        /// Gets or sets whether ID sorting is in ascending order
         /// </summary>
         bool IsIdSortAscending { get; set; }
 
         /// <summary>
-        /// Actualiza el ícono de ordenamiento según el estado actual
+        /// Updates the sort icon based on current state
         /// </summary>
         void UpdateSortIcon(FontIcon icon, bool isAscending);
 
         /// <summary>
-        /// Obtiene el glifo correspondiente al estado de ordenamiento
+        /// Gets the glyph for the current sort state
         /// </summary>
         string GetSortGlyph(bool isAscending);
 
         /// <summary>
-        /// Alterna el estado de ordenamiento y actualiza el ícono
+        /// Toggles sort state and updates the icon
         /// </summary>
         bool ToggleSortState(string sortType, FontIcon icon);
     }
 
+    /// <summary>
+    /// Handles sorting UI state and interactions
+    /// </summary>
     public class UISortingService : IUISortingService
     {
+        // Glyph constants for sort icons
         private const string ASCENDING_GLYPH = "\uE70D";
         private const string DESCENDING_GLYPH = "\uE70E";
 
+        // Default sort states
         public bool IsNameSortAscending { get; set; } = true;
         public bool IsIdSortAscending { get; set; } = true;
 
         /// <summary>
-        /// Actualiza el ícono de ordenamiento según el estado
+        /// Updates the sort icon based on direction
         /// </summary>
         public void UpdateSortIcon(FontIcon icon, bool isAscending)
         {
@@ -55,7 +59,7 @@ namespace Plantilla.Services
         }
 
         /// <summary>
-        /// Obtiene el glifo correspondiente al estado de ordenamiento
+        /// Gets the appropriate sort glyph
         /// </summary>
         public string GetSortGlyph(bool isAscending)
         {
@@ -63,7 +67,7 @@ namespace Plantilla.Services
         }
 
         /// <summary>
-        /// Alterna el estado de ordenamiento y actualiza el ícono
+        /// Toggles sort state and updates icon
         /// </summary>
         public bool ToggleSortState(string sortType, FontIcon icon)
         {

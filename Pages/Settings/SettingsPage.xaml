@@ -6,22 +6,23 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-
-    <!-- Margen = izq, arriba, derecha, abj.-->
+    <!-- Main Settings Container -->
     <StackPanel Margin="24">
+        <!-- Settings Title -->
         <TextBlock Text="Settings"
                  Style="{ThemeResource TitleLargeTextBlockStyle}"
                  FontSize="40"
                  FontWeight="Bold"
                  Margin="80,25,0,0"/>
 
-        <TextBlock Text="Appearance &#x26; behavior"
+        <!-- Appearance Section Header -->
+        <TextBlock Text="Appearance &amp; behavior"
                  Style="{ThemeResource SubtitleTextBlockStyle}"
                  FontWeight="SemiBold"
                  Opacity="0.9"
                  Margin="80,25,0,16"/>
                  
-        <!-- Panel Seleccion de Tema -->
+        <!-- Theme Selection Card -->
         <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               CornerRadius="4"
               Margin="80,0,80,8"
@@ -34,14 +35,14 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Icono Glyph -->
+                <!-- Theme Icon -->
                 <FontIcon Grid.Column="0"
                          Glyph="&#xE790;"
                          FontSize="16"
                          Opacity="0.8"
                          VerticalAlignment="Center"/>
 
-                <!-- Text Stack -->
+                <!-- Theme Description -->
                 <StackPanel Grid.Column="1" 
                           Margin="12,0,0,0"
                           VerticalAlignment="Center">
@@ -52,7 +53,7 @@
                              Opacity="0.8"/>
                 </StackPanel>
 
-                <!-- ComboBox -->
+                <!-- Theme Selection ComboBox -->
                 <ComboBox x:Name="cmbTheme"
                          Grid.Column="2"
                          MinWidth="150"

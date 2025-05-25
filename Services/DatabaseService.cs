@@ -6,11 +6,18 @@ using Plantilla.Models;
 
 namespace Plantilla.Services
 {
+    /// <summary>
+    /// Manages SQLite database operations for process information
+    /// </summary>
     public class DatabaseService
     {
+        // Database connection instance
         private static SQLiteAsyncConnection? _database;
         private static readonly string dbName = "ProcessInfo.db";
 
+        /// <summary>
+        /// Sets up the database connection
+        /// </summary>
         public async Task InitializeAsync()
         {
             if (_database != null)
@@ -30,6 +37,11 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Gets process information from the database
+        /// </summary>
+        /// <param name="processName">Name of the process to look up</param>
+        /// <returns>Process information if found, null otherwise</returns>
         public async Task<ProcessInfo?> GetProcessInfoAsync(string processName)
         {
             try

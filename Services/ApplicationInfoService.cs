@@ -7,19 +7,34 @@ using System.Linq;
 
 namespace Plantilla.Services
 {
+    /// <summary>
+    /// Interface for getting application information from processes
+    /// </summary>
     public interface IApplicationInfoService
     {
+        /// <summary>
+        /// Gets information about an application from its process
+        /// </summary>
         string GetApplicationInfo(Process process);
     }
 
+    /// <summary>
+    /// Service for retrieving application information from processes
+    /// </summary>
     public class ApplicationInfoService : IApplicationInfoService
     {
+        // Cache for storing process information
         private readonly Dictionary<string, string> _processCache = new Dictionary<string, string>();
+        
+        // List of known system processes
         private readonly HashSet<string> _systemProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system"
         };
 
+        /// <summary>
+        /// Gets information about an application from its process
+        /// </summary>
         public string GetApplicationInfo(Process process)
         {
             try
@@ -81,6 +96,9 @@ namespace Plantilla.Services
             }
         }
 
+        /// <summary>
+        /// Gets the best available name for an application from its version info
+        /// </summary>
         private string GetBestAppName(FileVersionInfo versionInfo, string processPath)
         {
             return new[]
@@ -93,6 +111,9 @@ namespace Plantilla.Services
             .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? "Unknown";
         }
 
+        /// <summary>
+        /// Gets the name of a Windows Store application
+        /// </summary>
         private string GetStoreAppName(string processPath)
         {
             try
@@ -120,6 +141,9 @@ namespace Plantilla.Services
             return "Windows Store App";
         }
 
+        /// <summary>
+        /// Gets application information from the registry
+        /// </summary>
         private string? GetRegistryAppInfo(string processName)
         {
             try
@@ -157,6 +181,9 @@ namespace Plantilla.Services
             return null;
         }
 
+        /// <summary>
+        /// Formats an application name by adding spaces before capital letters
+        /// </summary>
         private string FormatAppName(string name)
         {
             return System.Text.RegularExpressions.Regex.Replace(

@@ -1,3 +1,4 @@
+<!-- Declaration of the main window and its namespaces -->
 <Window
     x:Class="Plantilla.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -9,18 +10,24 @@
     mc:Ignorable="d"
     Title="Plantilla">
 
+    <!-- Main Grid that organizes the window layout -->
     <Grid>
+        <!-- Definition of Grid rows -->
         <Grid.RowDefinitions>
+            <!-- Auto height row for the title bar -->
             <RowDefinition Height="Auto" />
+            <!-- Row that takes up the remaining space -->
             <RowDefinition />
         </Grid.RowDefinitions>
 
+        <!-- Custom Title Bar -->
         <TitleBar Name="AppTitleBar"
                   Title="WTHIT"
                   IsBackButtonVisible="False"
                   IsPaneToggleButtonVisible="False"
                   IconSource="{dev:BitmapIconSource Source=Assets/icon.png}"/>
 
+        <!-- Main Navigation Control -->
         <NavigationView x:Name="NavView" 
                         PaneDisplayMode="Left"
                         IsPaneOpen="False"
@@ -32,27 +39,34 @@
                         IsPaneToggleButtonVisible="True"
                         IsSettingsVisible="True">
           
+            <!-- Main menu items -->
             <NavigationView.MenuItems>  
+                <!-- Navigation item for the Processes page -->
                 <NavigationViewItem x:Name="ProcessesItem"
                                   Content="Processes"
                                   Tag="processes"
                                   IsSelected="True">
                     <NavigationViewItem.Icon>
+                        <!-- Icon for the Processes page using FontIcon -->
                         <FontIcon Glyph="&#xE7F8;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
+            <!-- Footer menu items -->
             <NavigationView.FooterMenuItems>
+                <!-- Navigation item for the About page -->
                 <NavigationViewItem x:Name="AboutItem"
                                   Content="About"
                                   Tag="about">
                     <NavigationViewItem.Icon>
+                        <!-- Icon for the About page using FontIcon -->
                         <FontIcon Glyph="&#xE946;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
+            <!-- Content frame where pages will be loaded -->
             <Frame x:Name="contentFrame"/>
         </NavigationView>
 

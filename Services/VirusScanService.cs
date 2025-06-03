@@ -98,12 +98,12 @@ namespace Plantilla.Services
                 var attr = doc.RootElement.GetProperty("data").GetProperty("attributes");
 
                 // Get various file properties
-                string name = attr.TryGetProperty("meaningful_name", out var n) ? n.GetString() : null;
-                string type = attr.TryGetProperty("type_description", out var t) ? t.GetString() : null;
-                string tags = attr.TryGetProperty("tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
-                    ? string.Join(", ", tagsProp.EnumerateArray().Select(x => x.GetString()))
+                string? name = attr.TryGetProperty("meaningful_name", out var n) ? n.GetString() : null;
+                string? type = attr.TryGetProperty("type_description", out var t) ? t.GetString() : null;
+                string? tags = attr.TryGetProperty("tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
+                    ? string.Join(", ", tagsProp.EnumerateArray().Select(x => x.GetString() ?? string.Empty))
                     : null;
-                string altName = attr.TryGetProperty("names", out var namesProp) && namesProp.ValueKind == JsonValueKind.Array && namesProp.GetArrayLength() > 0
+                string? altName = attr.TryGetProperty("names", out var namesProp) && namesProp.ValueKind == JsonValueKind.Array && namesProp.GetArrayLength() > 0
                     ? namesProp[0].GetString()
                     : null;
 

@@ -7,12 +7,11 @@ namespace Plantilla.Models
     {
         // Private fields for properties with change notification
         private bool _isSelected;
-        private string _virusStatus;
+        private string _virusStatus = string.Empty;
 
-        public string ProcessName { get; set; }
+        public string ProcessName { get; set; } = string.Empty; 
         public int ProcessId { get; set; }
-        public string ApplicationRelated { get; set; }
-
+        public string ApplicationRelated { get; set; } = string.Empty; 
         /// <summary>
         /// Current virus scan status
         /// </summary>
@@ -29,7 +28,7 @@ namespace Plantilla.Models
             }
         }
 
-        public string Information { get; set; }
+        public string Information { get; set; } = string.Empty;
 
         /// <summary>
         /// Selection state of the process item
@@ -50,7 +49,7 @@ namespace Plantilla.Models
         /// <summary>
         /// Property change notification event
         /// </summary>
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>
         /// Raises the PropertyChanged event

@@ -23,29 +23,29 @@ namespace Plantilla.Services
     /// </summary>
     public class ApplicationInfoService : IApplicationInfoService
     {
-        // Cache for storing process information
+        // Mantenemos el resto de la clase igual
         private readonly Dictionary<string, string> _processCache = new Dictionary<string, string>();
-        
-        // List of known system processes
         private readonly HashSet<string> _systemProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system"
         };
 
         /// <summary>
-        /// Gets information about an application from its process
+        /// Retrieves readable application information for a given process.
         /// </summary>
+        /// <param name="process">The process to extract information from.</param>
+        /// <returns>The application name or related info.</returns>
         public string GetApplicationInfo(Process process)
         {
             try
             {
-                // Check cache first
-                if (_processCache.TryGetValue(process.ProcessName, out string cachedInfo))
+                // Check if the process info is already cached
+                if (_processCache.TryGetValue(process.ProcessName, out var cachedInfo))
                 {
                     return cachedInfo;
                 }
 
-                // For system processes, return quickly
+                // Return a default name for known system processes
                 if (_systemProcesses.Contains(process.ProcessName))
                 {
                     var result = $"Windows {process.ProcessName}";
@@ -57,22 +57,23 @@ namespace Plantilla.Services
 
                 try
                 {
+                    // Get the executable path of the process
                     string processPath = process.MainModule?.FileName ?? string.Empty;
                     if (!string.IsNullOrEmpty(processPath))
                     {
-                        // Try to get info from registry for Store Apps
+                        // If it's a Microsoft Store app
                         if (processPath.Contains("WindowsApps"))
                         {
                             appInfo = GetStoreAppName(processPath);
                         }
                         else
                         {
-                            // Get info from executable
+                            // Get version info from the executable
                             var versionInfo = FileVersionInfo.GetVersionInfo(processPath);
                             appInfo = GetBestAppName(versionInfo, processPath);
                         }
 
-                        // Try to get additional info from registry
+                        // Try to override with registry info if available
                         var registryInfo = GetRegistryAppInfo(process.ProcessName);
                         if (!string.IsNullOrEmpty(registryInfo))
                         {
@@ -82,19 +83,21 @@ namespace Plantilla.Services
                 }
                 catch
                 {
-                    // If process access fails, try registry
+                    // Fallback to registry info if an error occurs
                     appInfo = GetRegistryAppInfo(process.ProcessName) ?? "System Process";
                 }
 
-                // Save to cache
+                // Cache the result for future calls
                 _processCache[process.ProcessName] = appInfo;
                 return appInfo;
             }
             catch (Exception)
             {
+                // Return "Unknown" if anything fails
                 return "Unknown";
             }
         }
+
 
         /// <summary>
         /// Gets the best available name for an application from its version info

@@ -29,6 +29,7 @@ namespace Plantilla.Services
                 string databasePath = Path.Combine(appDirectory, dbName);
 
                 _database = new SQLiteAsyncConnection(databasePath);
+                await _database.CreateTableAsync<ProcessInfo>(); 
             }
             catch (Exception ex)
             {
@@ -40,13 +41,15 @@ namespace Plantilla.Services
         /// <summary>
         /// Gets process information from the database
         /// </summary>
-        /// <param name="processName">Name of the process to look up</param>
-        /// <returns>Process information if found, null otherwise</returns>
         public async Task<ProcessInfo?> GetProcessInfoAsync(string processName)
         {
             try
             {
                 await InitializeAsync();
+                
+                if (_database == null)
+                    throw new InvalidOperationException("Database not initialized");
+
                 return await _database.Table<ProcessInfo>()
                     .FirstOrDefaultAsync(p => p.ProcessName.ToLower() == processName.ToLower());
             }

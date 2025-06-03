@@ -64,16 +64,19 @@ namespace Plantilla.Services
 
         /// <summary>
         /// Gets the process path and description
-        /// </summary>
+        /// </summary>// Cambiar el método:
         private async Task<(string path, string description)> GetProcessPathAndDescription(int processId)
         {
             try
             {
-                var proc = Process.GetProcessById(processId);
-                return (
-                    proc.MainModule?.FileName ?? "Path not available",
-                    proc.MainModule?.FileVersionInfo?.FileDescription ?? "Description not available"
-                );
+                return await Task.Run(() =>
+                {
+                    var proc = Process.GetProcessById(processId);
+                    return (
+                        proc.MainModule?.FileName ?? "Path not available",
+                        proc.MainModule?.FileVersionInfo?.FileDescription ?? "Description not available"
+                    );
+                });
             }
             catch (Exception)
             {

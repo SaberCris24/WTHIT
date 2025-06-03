@@ -20,12 +20,13 @@ namespace Plantilla.Pages.About
 
             if (sender is SettingsCard card)
             {
-                var originalHeader = card.Header as string;
+                // Guardar el header original de manera segura
+                string headerText = card.Header?.ToString() ?? "Clone Repository";
                 card.Header = "Copied!";
                 
                 DispatcherQueue.TryEnqueue(() =>
                 {
-                    card.Header = originalHeader;
+                    card.Header = headerText;
                 });
             }
         }

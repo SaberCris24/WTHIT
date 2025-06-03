@@ -35,6 +35,7 @@
                         OpenPaneLength="200"
                         CompactPaneLength="48"
                         SelectionChanged="NavView_SelectionChanged"
+                        DisplayModeChanged="NavView_DisplayModeChanged"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleButtonVisible="True"
                         IsSettingsVisible="True">
@@ -69,6 +70,5 @@
             <!-- Content frame where pages will be loaded -->
             <Frame x:Name="contentFrame"/>
         </NavigationView>
-
     </Grid>
 </Window>

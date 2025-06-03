@@ -7,6 +7,7 @@ using WinRT.Interop;
 using Plantilla.Pages.About;
 using Plantilla.Pages.Processes;
 using Plantilla.Pages.Settings;
+using Windows.Storage;
 
 namespace Plantilla
 {
@@ -29,6 +30,11 @@ namespace Plantilla
         private const uint LR_LOADFROMFILE = 0x00000010;  // Load image from file flag
 
         /// <summary>
+        /// Public property to access the NavigationView control from other parts of the app
+        /// </summary>
+        public NavigationView NavigationViewControl => NavView;
+
+        /// <summary>
         /// Constructor for the main window
         /// </summary>
         /// <param name="MinWidth">Minimum width of the window</param>
@@ -37,6 +43,7 @@ namespace Plantilla
         {
             // Initialize the window components
             this.InitializeComponent();
+            
             // Enable custom title bar
             this.ExtendsContentIntoTitleBar = true;
 
@@ -60,6 +67,12 @@ namespace Plantilla
 
             // Set the initial page to Processes
             contentFrame.Navigate(typeof(ProcessesPage));
+
+            // Initialize NavigationView position from settings
+            LoadNavigationViewPosition();
+
+            // Subscribe to DisplayMode changes to save the state
+            NavView.DisplayModeChanged += NavView_DisplayModeChanged;
         }
 
         /// <summary>
@@ -88,6 +101,79 @@ namespace Plantilla
                         break;
                 }
             }
+        }
+
+        /// <summary>
+        /// Event handler for NavigationView DisplayMode changes
+        /// </summary>
+        private void NavView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
+        {
+            SaveNavigationViewPosition(sender.PaneDisplayMode != NavigationViewPaneDisplayMode.Top);
+        }
+
+        /// <summary>
+        /// Loads the saved NavigationView position from settings
+        /// </summary>
+        private void LoadNavigationViewPosition()
+        {
+            try
+            {
+                var localSettings = ApplicationData.Current.LocalSettings;
+                var isLeftMode = localSettings.Values["NavViewIsLeftMode"] as bool? ?? true;
+
+                NavView.PaneDisplayMode = isLeftMode ? 
+                    NavigationViewPaneDisplayMode.Auto : 
+                    NavigationViewPaneDisplayMode.Top;
+
+                // Update additional properties based on mode
+                if (!isLeftMode)
+                {
+                    NavView.IsPaneOpen = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading navigation position: {ex.Message}");
+                // Default to left mode if there's an error
+                NavView.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
+            }
+        }
+
+        /// <summary>
+        /// Saves the current NavigationView position to settings
+        /// </summary>
+        /// <param name="isLeftMode">True if the navigation is in left mode, false for top mode</param>
+        public void SaveNavigationViewPosition(bool isLeftMode)
+        {
+            try
+            {
+                var localSettings = ApplicationData.Current.LocalSettings;
+                localSettings.Values["NavViewIsLeftMode"] = isLeftMode;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving navigation position: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates the NavigationView display mode
+        /// </summary>
+        /// <param name="isLeftMode">True to set left mode, false for top mode</param>
+        public void UpdateNavigationViewMode(bool isLeftMode)
+        {
+            if (isLeftMode)
+            {
+                NavView.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
+                NavView.IsPaneOpen = true;
+            }
+            else
+            {
+                NavView.PaneDisplayMode = NavigationViewPaneDisplayMode.Top;
+                NavView.IsPaneOpen = false;
+            }
+
+            SaveNavigationViewPosition(isLeftMode);
         }
     }
 }

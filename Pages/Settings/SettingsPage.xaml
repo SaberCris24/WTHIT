@@ -66,5 +66,49 @@
                 </ComboBox>
             </Grid>
         </Grid>
+
+        <!-- Navigation View Position Selection Card -->
+        <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="4"
+              Margin="80,0,80,8"
+              Height="72">
+            
+            <Grid Margin="16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Navigation Icon -->
+                <FontIcon Grid.Column="0"
+                         Glyph="&#xF594;"
+                         FontSize="16"
+                         Opacity="0.8"
+                         VerticalAlignment="Center"/>
+
+                <!-- Navigation Description -->
+                <StackPanel Grid.Column="1" 
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="Navigation style"
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Select where the navigation pane appears"
+                             Style="{ThemeResource CaptionTextBlockStyle}"
+                             Opacity="0.8"/>
+                </StackPanel>
+
+                <!-- Navigation Position Selection ComboBox -->
+                <ComboBox x:Name="cmbNavPosition"
+                         Grid.Column="2"
+                         MinWidth="150"
+                         Height="32"
+                         VerticalAlignment="Center"
+                         SelectionChanged="cmbNavPosition_SelectionChanged">
+                    <ComboBoxItem Content="Left" Tag="Left" IsSelected="True"/>
+                    <ComboBoxItem Content="Top" Tag="Top"/>
+                </ComboBox>
+            </Grid>
+        </Grid>
     </StackPanel>
 </Page>

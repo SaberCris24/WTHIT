@@ -60,7 +60,7 @@
                          Height="32"
                          VerticalAlignment="Center"
                          SelectionChanged="cmbTheme_SelectionChanged">
-                    <ComboBoxItem Content="Use system setting" Tag="Default"/>
+                    <ComboBoxItem Content="System Default" Tag="Default"/>
                     <ComboBoxItem Content="Light" Tag="Light"/>
                     <ComboBoxItem Content="Dark" Tag="Dark"/>
                 </ComboBox>

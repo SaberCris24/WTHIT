@@ -1,54 +1,62 @@
-<!-- Declaration of the main window and its namespaces -->
 <Window
     x:Class="Plantilla.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Plantilla"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:dev="using:DevWinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Title="Plantilla">
+    mc:Ignorable="d">
 
-    <!-- Main Grid that organizes the window layout -->
-    <Grid>
-        <!-- Definition of Grid rows -->
-        <Grid.RowDefinitions>
-            <!-- Auto height row for the title bar -->
-            <RowDefinition Height="Auto" />
-            <!-- Row that takes up the remaining space -->
-            <RowDefinition />
-        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <!-- Custom Title Bar -->
-        <TitleBar Name="AppTitleBar"
-                  Title="WTHIT"
-                  IsBackButtonVisible="False"
-                  IsPaneToggleButtonVisible="False"
-                  IconSource="{dev:BitmapIconSource Source=Assets/icon.png}"/>
+            <!-- Custom Title Bar -->
+            <Border
+                x:Name="AppTitleBar"
+                Height="{Binding ElementName=NavView, Path=CompactPaneLength}"
+                Margin="48,0,0,0"
+                VerticalAlignment="Stretch"
+                Grid.Row="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <Image 
+                        Source="/Assets/icon.png"
+                        Width="18"
+                        Height="18"
+                        VerticalAlignment="Center"
+                        Margin="8,0,0,0"/>
+                    <TextBlock
+                        x:Name="AppTitleTextBlock"
+                        Text="WTHIT"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0"/>
+                </StackPanel>
+            </Border>
 
-        <!-- Main Navigation Control -->
-        <NavigationView x:Name="NavView" 
-                        PaneDisplayMode="Left"
-                        IsPaneOpen="False"
-                        Grid.Row="1"
-                        OpenPaneLength="200"
-                        CompactPaneLength="48"
-                        SelectionChanged="NavView_SelectionChanged"
-                        DisplayModeChanged="NavView_DisplayModeChanged"
-                        IsBackButtonVisible="Collapsed"
-                        IsPaneToggleButtonVisible="True"
-                        IsSettingsVisible="True">
+            <!-- Navigation View -->
+            <NavigationView 
+                x:Name="NavView"
+                Grid.Row="1"
+                PaneDisplayMode="Left"
+                IsPaneOpen="False"
+                OpenPaneLength="200"
+                CompactPaneLength="48"
+                SelectionChanged="NavView_SelectionChanged"
+                IsBackButtonVisible="Collapsed"
+                IsPaneToggleButtonVisible="True"
+                IsSettingsVisible="True">
+        
           
             <!-- Main menu items -->
             <NavigationView.MenuItems>  
-                <!-- Navigation item for the Processes page -->
                 <NavigationViewItem x:Name="ProcessesItem"
                                   Content="Processes"
                                   Tag="processes"
                                   IsSelected="True">
                     <NavigationViewItem.Icon>
-                        <!-- Icon for the Processes page using FontIcon -->
                         <FontIcon Glyph="&#xE7F8;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
@@ -56,19 +64,23 @@
 
             <!-- Footer menu items -->
             <NavigationView.FooterMenuItems>
-                <!-- Navigation item for the About page -->
                 <NavigationViewItem x:Name="AboutItem"
                                   Content="About"
                                   Tag="about">
                     <NavigationViewItem.Icon>
-                        <!-- Icon for the About page using FontIcon -->
                         <FontIcon Glyph="&#xE946;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <!-- Content frame where pages will be loaded -->
-            <Frame x:Name="contentFrame"/>
+            <!-- Content Frame -->
+            <Frame x:Name="contentFrame">
+                <Frame.ContentTransitions>
+                    <TransitionCollection>
+                        <ContentThemeTransition />
+                    </TransitionCollection>
+                </Frame.ContentTransitions>
+            </Frame>
         </NavigationView>
     </Grid>
 </Window>

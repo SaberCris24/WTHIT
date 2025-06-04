@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Plantilla.Models;
+using Windows.UI;
+using Microsoft.UI;
 
 namespace Plantilla.Services
 {
@@ -64,7 +66,7 @@ namespace Plantilla.Services
 
         /// <summary>
         /// Gets the process path and description
-        /// </summary>// Cambiar el método:
+        /// </summary>
         private async Task<(string path, string description)> GetProcessPathAndDescription(int processId)
         {
             try
@@ -88,17 +90,16 @@ namespace Plantilla.Services
         /// Creates the dialog UI with process information
         /// </summary>
         private ContentDialog CreateProcessDetailsDialog(
-            ProcessItem process, 
-            ProcessInfo? processInfo, 
+            ProcessItem process,
+            ProcessInfo? processInfo,
             string path,
-            XamlRoot xamlRoot
-            )
+            XamlRoot xamlRoot)
         {
             var mainPanel = new Grid();
-            
+
             // Create a header grid to contain both title and button
             var headerGrid = new Grid();
-            
+
             // Create columns for the header grid
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -115,8 +116,8 @@ namespace Plantilla.Services
             // Create the VirusTotal info button
             var vtButton = new Button
             {
-                Content = new FontIcon 
-                { 
+                Content = new FontIcon
+                {
                     FontFamily = new FontFamily("Segoe MDL2 Assets"),
                     Glyph = "\uE946",
                     FontSize = 16
@@ -125,7 +126,7 @@ namespace Plantilla.Services
                 Height = 32,
                 Padding = new Thickness(0),
                 Margin = new Thickness(0),
-                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
+                RequestedTheme = App.CurrentTheme, // Use the app's current theme
                 VerticalAlignment = VerticalAlignment.Center
             };
 
@@ -176,7 +177,8 @@ namespace Plantilla.Services
             contentPanel.Children.Add(CreateDetailTextBlock($"File Location: {path}"));
             contentPanel.Children.Add(CreateDetailTextBlock($"What is Doing this process: {(processInfo?.Description ?? "Not information yet")}"));
             contentPanel.Children.Add(CreateDetailTextBlock($"Is this process resource intensive?: {(processInfo?.IsCpuIntensive ?? "No information available")}"));
-            return new ContentDialog
+
+            var dialog = new ContentDialog
             {
                 Content = new StackPanel
                 {
@@ -188,9 +190,14 @@ namespace Plantilla.Services
                 },
                 PrimaryButtonText = "Close",
                 DefaultButton = ContentDialogButton.Primary,
-                RequestedTheme = ((App)Application.Current).ThemeService.GetActualTheme(),
+                RequestedTheme = App.CurrentTheme, // Use the app's current theme
                 XamlRoot = xamlRoot,
             };
+
+            // Apply theme-specific styles
+            ApplyThemeStyles(dialog);
+
+            return dialog;
         }
 
         /// <summary>
@@ -203,6 +210,23 @@ namespace Plantilla.Services
                 Text = text,
                 TextWrapping = TextWrapping.Wrap
             };
+        }
+
+        /// <summary>
+        /// Applies theme-specific styles to the dialog
+        /// </summary>
+        private void ApplyThemeStyles(ContentDialog dialog)
+        {
+            if (App.CurrentTheme == ElementTheme.Dark)
+            {
+                dialog.Background = new SolidColorBrush(Color.FromArgb(255, 32, 32, 32));
+                dialog.Foreground = new SolidColorBrush(Colors.White);
+            }
+            else
+            {
+                dialog.Background = new SolidColorBrush(Colors.White);
+                dialog.Foreground = new SolidColorBrush(Colors.Black);
+            }
         }
     }
 }

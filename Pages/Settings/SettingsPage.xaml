@@ -67,6 +67,51 @@
             </Grid>
         </Grid>
 
+        <!-- Backdrop Selection Card -->
+        <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="4"
+              Margin="80,0,80,8"
+              Height="72">
+            
+            <Grid Margin="16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Backdrop Icon -->
+                <FontIcon Grid.Column="0"
+                         Glyph="&#xE7B3;"
+                         FontSize="16"
+                         Opacity="0.8"
+                         VerticalAlignment="Center"/>
+
+                <!-- Backdrop Description -->
+                <StackPanel Grid.Column="1" 
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="Window backdrop"
+                             FontWeight="SemiBold"/>
+                    <TextBlock Text="Choose the window background effect"
+                             Style="{ThemeResource CaptionTextBlockStyle}"
+                             Opacity="0.8"/>
+                </StackPanel>
+
+                <!-- Backdrop Selection ComboBox -->
+                <ComboBox x:Name="cmbBackdrop"
+                         Grid.Column="2"
+                         MinWidth="150"
+                         Height="32"
+                         VerticalAlignment="Center"
+                         SelectionChanged="cmbBackdrop_SelectionChanged">
+                    <ComboBoxItem Content="Mica" Tag="Mica" IsSelected="True"/>
+                    <ComboBoxItem Content="Mica Alt" Tag="MicaAlt"/>
+                    <ComboBoxItem Content="Acrylic" Tag="Acrylic"/>
+                </ComboBox>
+            </Grid>
+        </Grid>
+
         <!-- Navigation View Position Selection Card -->
         <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               CornerRadius="4"

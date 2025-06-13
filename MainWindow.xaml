@@ -13,20 +13,77 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <!-- Navigation View -->
+            <NavigationView
+                x:Name="NavView"
+                Grid.Row="0"
+                Grid.RowSpan="2" 
+                Canvas.ZIndex="0" 
+                PaneDisplayMode="Left"
+                IsPaneOpen="False"
+                OpenPaneLength="200"
+                CompactPaneLength="48"
+                SelectionChanged="NavView_SelectionChanged"
+                IsBackButtonVisible="Auto" 
+                IsPaneToggleButtonVisible="True"
+                IsSettingsVisible="True"
+                IsTitleBarAutoPaddingEnabled="True"> 
+
+                <NavigationView.Resources>
+                    <!-- This top margin is the height of the custom titleBar -->
+                    <Thickness x:Key="NavigationViewContentMargin">0,48,0,0</Thickness>
+                    <Thickness x:Key="NavigationViewMinimalContentMargin">0,48,0,0</Thickness>
+                </NavigationView.Resources>
+
+                <!-- Main menu items -->
+                <NavigationView.MenuItems>
+                    <NavigationViewItem x:Name="ProcessesItem"
+                                      Content="Processes"
+                                      Tag="processes"
+                                      IsSelected="True">
+                        <NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE7F8;"/>
+                        </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                </NavigationView.MenuItems>
+
+                <!-- Footer menu items -->
+                <NavigationView.FooterMenuItems>
+                    <NavigationViewItem x:Name="AboutItem"
+                                      Content="About"
+                                      Tag="about">
+                        <NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE946;"/>
+                        </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                </NavigationView.FooterMenuItems>
+
+                <!-- Content Frame -->
+                <Frame x:Name="contentFrame">
+                    <Frame.ContentTransitions>
+                        <TransitionCollection>
+                            <ContentThemeTransition />
+                        </TransitionCollection>
+                    </Frame.ContentTransitions>
+                </Frame>
+            </NavigationView>
+
             <!-- Custom Title Bar -->
             <Border
                 x:Name="AppTitleBar"
+                Grid.Row="0" 
+                Canvas.ZIndex="1" 
                 Height="{Binding ElementName=NavView, Path=CompactPaneLength}"
-                Margin="48,0,0,0"
+                Margin="48,0,0,0" 
                 VerticalAlignment="Stretch"
-                Grid.Row="0">
+                IsHitTestVisible="True"> 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
-                    <Image 
+                    <Image
                         Source="/Assets/icon.png"
                         Width="18"
                         Height="18"
                         VerticalAlignment="Center"
-                        Margin="8,0,0,0"/>
+                        Margin="8,0,0,0"/> <!-- Margin for the icon within the AppTitleBar -->
                     <TextBlock
                         x:Name="AppTitleTextBlock"
                         Text="WTHIT"
@@ -35,52 +92,15 @@
                         Margin="12,0,0,0"/>
                 </StackPanel>
             </Border>
-
-            <!-- Navigation View -->
-            <NavigationView 
-                x:Name="NavView"
-                Grid.Row="1"
-                PaneDisplayMode="Left"
-                IsPaneOpen="False"
-                OpenPaneLength="200"
-                CompactPaneLength="48"
-                SelectionChanged="NavView_SelectionChanged"
-                IsBackButtonVisible="Collapsed"
-                IsPaneToggleButtonVisible="True"
-                IsSettingsVisible="True">
-        
-          
-            <!-- Main menu items -->
-            <NavigationView.MenuItems>  
-                <NavigationViewItem x:Name="ProcessesItem"
-                                  Content="Processes"
-                                  Tag="processes"
-                                  IsSelected="True">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE7F8;"/>
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.MenuItems>
-
-            <!-- Footer menu items -->
-            <NavigationView.FooterMenuItems>
-                <NavigationViewItem x:Name="AboutItem"
-                                  Content="About"
-                                  Tag="about">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE946;"/>
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.FooterMenuItems>
-
-            <!-- Content Frame -->
-            <Frame x:Name="contentFrame">
-                <Frame.ContentTransitions>
-                    <TransitionCollection>
-                        <ContentThemeTransition />
-                    </TransitionCollection>
-                </Frame.ContentTransitions>
-            </Frame>
-        </NavigationView>
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="WindowActivationStates">
+                    <VisualState x:Name="Activated" />
+                    <VisualState x:Name="Deactivated">
+                        <VisualState.Setters>
+                            <Setter Target="AppTitleTextBlock.Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
     </Grid>
 </Window>

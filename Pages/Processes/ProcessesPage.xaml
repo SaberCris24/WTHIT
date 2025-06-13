@@ -22,12 +22,11 @@
 
             <Grid Grid.Row="0">
                 <TextBlock
+                    Style="{ThemeResource TitleLargeTextBlockStyle}"
                     x:Name="TitleTextBlock"
                     Text="What The Hell Is This?"
                     FontSize="40"
                     FontWeight="Bold"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
                     Margin="80,25,0,0"/>
 
                 <StackPanel Orientation="Horizontal" 

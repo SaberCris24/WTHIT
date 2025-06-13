@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Plantilla.Helpers;
+using Plantilla.Pages;
 using Plantilla.Pages.About;
 using Plantilla.Pages.Processes;
 using Plantilla.Pages.Settings;
@@ -21,6 +22,9 @@ namespace Plantilla
             {
                 this.InitializeComponent();
 
+                // Initialize NavigationRootPage with the NavigationView
+                NavigationRootPage.Initialize(NavView);
+
                 // Initialize navigation helper - must be after InitializeComponent to ensure NavView exists
                 _navigationHelper = new NavigationHelper(NavView);
 
@@ -35,8 +39,9 @@ namespace Plantilla
                 // Navigate to default page
                 contentFrame.Navigate(typeof(ProcessesPage));
 
-                // Initialize NavigationView
-                _navigationHelper.LoadNavigationViewPosition();
+                // Initialize NavigationView position based on saved configuration
+                bool isLeftMode = NavigationOrientationHelper.IsLeftMode();
+                NavigationOrientationHelper.IsLeftModeForElement(isLeftMode, NavView);
 
                 // Subscribe to events
                 NavView.DisplayModeChanged += NavView_DisplayModeChanged;
@@ -55,12 +60,12 @@ namespace Plantilla
         // Expose navigation methods
         public void SaveNavigationViewPosition(bool isLeftMode)
         {
-            _navigationHelper.SaveNavigationViewPosition(isLeftMode);
+            NavigationOrientationHelper.IsLeftModeForElement(isLeftMode, NavView);
         }
 
         public void UpdateNavigationViewMode(bool isLeftMode)
         {
-            _navigationHelper.UpdateNavigationViewMode(isLeftMode);
+            NavigationOrientationHelper.UpdateNavigationViewForElement(isLeftMode, NavView);
         }
 
         private void SetupTheme()
@@ -87,7 +92,7 @@ namespace Plantilla
 
         private void NavView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
-            _navigationHelper.SaveNavigationViewPosition(sender.PaneDisplayMode != NavigationViewPaneDisplayMode.Top);
+
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

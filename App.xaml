@@ -10,6 +10,11 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- NavigationView Background Resources -->
+            <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="{ThemeResource SystemChromeMediumLowColor}"/>
+            <SolidColorBrush x:Key="TopNavigationViewTopPaneBackground" Color="{ThemeResource SystemChromeMediumColor}"/>
+            
             <!-- Other app resources here -->
         </ResourceDictionary>
     </Application.Resources>

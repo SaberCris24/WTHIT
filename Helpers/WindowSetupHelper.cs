@@ -47,6 +47,8 @@ namespace Plantilla.Helpers
             {
                 var presenter = OverlappedPresenter.Create();
                 presenter.IsResizable = true;
+                presenter.PreferredMinimumHeight = MinHeight;
+                presenter.PreferredMinimumWidth = MinWidth;
                 presenter.IsMaximizable = true;
                 presenter.IsMinimizable = true;
 

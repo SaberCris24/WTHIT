@@ -18,7 +18,7 @@ namespace Plantilla.Helpers
             try
             {
                 var localSettings = ApplicationData.Current.LocalSettings;
-                var isLeftMode = localSettings.Values["NavViewIsLeftMode"] as bool? ?? true;
+                var isLeftMode = localSettings.Values["NavViewIsLeftMode"] as bool? ?? false;
 
                 _navView.PaneDisplayMode = isLeftMode ? 
                     NavigationViewPaneDisplayMode.Auto : 
@@ -56,7 +56,7 @@ namespace Plantilla.Helpers
                 if (isLeftMode)
                 {
                     _navView.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
-                    _navView.IsPaneOpen = true;
+                    _navView.IsPaneOpen = false;
                 }
                 else
                 {

@@ -14,55 +14,59 @@
         
         <!-- Header -->
         <Grid Grid.Row="0" Padding="12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <Grid Grid.Row="0">
-                <TextBlock
-                    Style="{ThemeResource TitleLargeTextBlockStyle}"
-                    x:Name="TitleTextBlock"
-                    Text="What The Hell Is This?"
-                    FontSize="40"
-                    FontWeight="Bold"
-                    Margin="80,25,0,0"/>
+            <!-- Title -->
+            <TextBlock
+                Style="{ThemeResource TitleLargeTextBlockStyle}"
+                x:Name="TitleTextBlock"
+                Text="What The Hell Is This?"
+                FontSize="40"
+                FontWeight="Bold"
+                Margin="0,25,0,0"
+                VerticalAlignment="Center"
+                TextTrimming="CharacterEllipsis"
+                Grid.Column="0"/>
 
-                <StackPanel Orientation="Horizontal" 
-                          HorizontalAlignment="Right" 
-                          VerticalAlignment="Center"
-                          Spacing="8"
-                          Margin="0,25,25,0">
-                    <Button x:Name="ScanButton"
-                            Click="ScanButton_Click"
-                            IsEnabled="{x:Bind IsProcessSelected, Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE9F9;"/>
-                            <TextBlock Text="Scan Selected Process"/>
-                        </StackPanel>
-                    </Button>
+            <!-- Controls: Scan, Search, Refresh -->
+            <StackPanel Grid.Column="1"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        Margin="0,25,0,0"
+                        Orientation="Horizontal"
+                        MinWidth="320">
+                <Button x:Name="ScanButton"
+                        Click="ScanButton_Click"
+                        IsEnabled="{x:Bind IsProcessSelected, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE9F9;"/>
+                        <TextBlock Text="Scan Selected Process"/>
+                    </StackPanel>
+                </Button>
 
-                    <AutoSuggestBox 
-                        x:Name="SearchBox"
-                        PlaceholderText="Search for processes"
-                        QueryIcon="Find"
-                        Width="300"
-                        QuerySubmitted="SearchBox_QuerySubmitted"
-                        TextChanged="SearchBox_TextChanged"
-                        SuggestionChosen="SearchBox_SuggestionChosen">
-                    </AutoSuggestBox>
+                <AutoSuggestBox 
+                    x:Name="SearchBox"
+                    PlaceholderText="Search for processes"
+                    QueryIcon="Find"
+                    Width="200"
+                    QuerySubmitted="SearchBox_QuerySubmitted"
+                    TextChanged="SearchBox_TextChanged"
+                    SuggestionChosen="SearchBox_SuggestionChosen"
+                    Margin="8,0,0,0"/>
 
-                    <Button x:Name="RefreshButton"
-                            Click="RefreshButton_Click"
-                            Width="32"
-                            Height="32"
-                            Padding="4"
-                            ToolTipService.ToolTip="Refresh List">
-                        <FontIcon Glyph="&#xE72C;" FontSize="14"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
+                <Button x:Name="RefreshButton"
+                        Click="RefreshButton_Click"
+                        Width="32"
+                        Height="32"
+                        Padding="4"
+                        ToolTipService.ToolTip="Refresh List"
+                        Margin="8,0,0,0">
+                    <FontIcon Glyph="&#xE72C;" FontSize="14"/>
+                </Button>
+            </StackPanel>
         </Grid>
         
         <!-- Process List -->

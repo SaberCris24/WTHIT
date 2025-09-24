@@ -11,6 +11,8 @@ namespace Plantilla.Helpers
     /// </summary>
     public static class BackdropHelper
     {
+        private static BackdropType? _cachedBestBackdrop;
+
         /// <summary>
         /// Available backdrop types supported by the application
         /// </summary>
@@ -63,6 +65,11 @@ namespace Plantilla.Helpers
         /// </summary>
         /// <returns>The most suitable backdrop type</returns>
         public static BackdropType GetBestAvailableBackdrop()
+        {
+            return _cachedBestBackdrop ??= CalculateBestBackdrop();
+        }
+
+        private static BackdropType CalculateBestBackdrop()
         {
             if (MicaController.IsSupported())
                 return BackdropType.Mica;

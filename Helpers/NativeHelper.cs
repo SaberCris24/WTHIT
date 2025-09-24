@@ -1,30 +1,76 @@
+using System;
 using System.Runtime.InteropServices;
 
 namespace Plantilla
 {
     internal class NativeHelper
     {
-        // Constantes de error
+        // Common Win32 error codes used in package detection
         public const int ERROR_SUCCESS = 0;
         public const int ERROR_INSUFFICIENT_BUFFER = 122;
         public const int APPMODEL_ERROR_NO_PACKAGE = 15700;
 
-        // Importación de la función nativa de Windows
-        [DllImport("api-ms-win-appmodel-runtime-l1-1-1", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.U4)]
-        internal static extern uint GetCurrentPackageId(ref int pBufferLength, out byte pBuffer);
+        // Cached result for whether the app is packaged
+        private static bool? _isAppPackagedCache;
 
-        // Propiedad para verificar si la aplicación está empaquetada
+        // Lock object for thread-safety
+        private static readonly object _lockObject = new();
+
+        // Import of the Win32 API function from kernel32.dll
+        // GetCurrentPackageId retrieves the package identity of the current process.
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = false)]
+        private static extern int GetCurrentPackageId(
+            ref int bufferLength,
+            IntPtr buffer);
+
+        /// <summary>
+        /// Determines whether the application is running as a packaged (MSIX) app.
+        /// Uses caching to avoid repeated Win32 calls.
+        /// </summary>
         public static bool IsAppPackaged
         {
             get
             {
-                int bufferSize = 0;
-                byte byteBuffer = 0;
-                uint lastError = GetCurrentPackageId(ref bufferSize, out byteBuffer);
-                
-                // Si recibimos APPMODEL_ERROR_NO_PACKAGE, significa que la app no está empaquetada
-                return lastError != APPMODEL_ERROR_NO_PACKAGE;
+                // Return cached value if already evaluated
+                if (_isAppPackagedCache.HasValue)
+                    return _isAppPackagedCache.Value;
+
+                lock (_lockObject)
+                {
+                    // Double-check inside lock for thread safety
+                    if (_isAppPackagedCache.HasValue)
+                        return _isAppPackagedCache.Value;
+
+                    int bufferLength = 0;
+                    // Call GetCurrentPackageId with null buffer to check status
+                    int result = GetCurrentPackageId(ref bufferLength, IntPtr.Zero);
+
+                    // Interpret results:
+                    // - ERROR_INSUFFICIENT_BUFFER → process has a package identity (packaged app)
+                    // - APPMODEL_ERROR_NO_PACKAGE → process is not packaged
+                    // - Any other code → unexpected error
+                    _isAppPackagedCache = result switch
+                    {
+                        ERROR_INSUFFICIENT_BUFFER => true,
+                        APPMODEL_ERROR_NO_PACKAGE => false,
+                        _ => throw new InvalidOperationException(
+                            $"Unexpected error while checking app package status: {result}")
+                    };
+
+                    return _isAppPackagedCache.Value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the cached value so the status will be re-evaluated
+        /// on the next call to IsAppPackaged.
+        /// </summary>
+        internal static void ClearCache()
+        {
+            lock (_lockObject)
+            {
+                _isAppPackagedCache = null;
             }
         }
     }

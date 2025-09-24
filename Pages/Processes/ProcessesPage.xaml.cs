@@ -12,19 +12,19 @@ using Plantilla.Services;
 namespace Plantilla.Pages.Processes
 {
     /// <summary>
-    /// Página principal que muestra y gestiona los procesos del sistema
+    /// Main page that displays and manages system processes
     /// </summary>
     public sealed partial class ProcessesPage : Page, INotifyPropertyChanged
     {
-        // Colección observable de procesos que se muestra en la UI
+        // Observable collection of processes displayed in the UI
         private ObservableCollection<ProcessItem> Processes { get; set; }
         
-        // Variables de estado
+        // State variables
         private bool _isProcessSelected;
         private List<ProcessItem> allProcesses;
         private static bool _processesLoaded = false;
         
-        // Servicios inyectados
+        // Injected services
         private readonly DatabaseService _databaseService;
         private readonly IVirusScanService _virusScanService;
         private readonly IApplicationInfoService _applicationInfoService;
@@ -36,8 +36,8 @@ namespace Plantilla.Pages.Processes
         private readonly IUISortingService _uiSortingService;
 
         /// <summary>
-        /// Propiedad que indica si hay algún proceso seleccionado
-        /// Notifica a la UI cuando cambia su valor
+        /// Property that indicates if any process is selected
+        /// Notifies the UI when its value changes
         /// </summary>
         public bool IsProcessSelected
         {
@@ -55,20 +55,20 @@ namespace Plantilla.Pages.Processes
         public event PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>
-        /// Constructor de la página
-        /// Inicializa los componentes y servicios necesarios
+        /// Page constructor
+        /// Initializes the components and required services
         /// </summary>
         public ProcessesPage()
         {
-            // Inicialización de componentes UI
+            // Initialize UI components
             this.InitializeComponent();
             this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
             Processes = new ObservableCollection<ProcessItem>();
             ProcessListView.ItemsSource = Processes;
 
-            // Inicialización de servicios
+            // Initialize services
             _databaseService = new DatabaseService();
-            _virusScanService = new VirusScanService("1234"); // Reemplaza con tu API key real
+            _virusScanService = new VirusScanService("1234"); // Replace with your real API key
             _applicationInfoService = new ApplicationInfoService();
             _processSearchService = new ProcessSearchService();
             _processDetailsDialogService = new ProcessDetailsDialogService(_virusScanService, _databaseService);
@@ -77,13 +77,13 @@ namespace Plantilla.Pages.Processes
             _processSelectionService = new ProcessSelectionService();
             _uiSortingService = new UISortingService();
             
-            // Inicializar el servicio de notificaciones
+            // Initialize notification service
             _notificationService.Initialize(StatusInfoBar);
 
-            // Inicializar la base de datos
+            // Initialize database
             _ = _databaseService.InitializeAsync();
 
-            // Cargar procesos iniciales
+            // Load initial processes
             if (allProcesses == null)
             {
                 allProcesses = new List<ProcessItem>();
@@ -94,7 +94,7 @@ namespace Plantilla.Pages.Processes
                 RefreshProcessesFromAll();
             }
 
-            // Configurar evento Loaded
+            // Configure Loaded event
             this.Loaded += (s, e) =>
             {
                 if (!_processesLoaded)
@@ -106,7 +106,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Carga todos los procesos en la lista allProcesses
+        /// Loads all processes into the allProcesses list
         /// </summary>
         private void LoadProcessesToAll()
         {
@@ -116,7 +116,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Actualiza la colección observable desde allProcesses
+        /// Updates the observable collection from allProcesses
         /// </summary>
         private void RefreshProcessesFromAll()
         {
@@ -128,7 +128,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Carga los procesos del sistema en la colección observable
+        /// Loads system processes into the observable collection
         /// </summary>
         private void LoadProcesses()
         {
@@ -156,7 +156,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Actualiza el estado de selección de procesos
+        /// Updates the selection state of processes
         /// </summary>
         private void UpdateSelectionState()
         {
@@ -164,7 +164,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Click del botón Refresh
+        /// Click event handler for the Refresh button
         /// </summary>
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
@@ -172,8 +172,8 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Click del botón Scan
-        /// Escanea los procesos seleccionados en busca de virus
+        /// Click event handler for the Scan button
+        /// Scans the selected processes for viruses
         /// </summary>
         private async void ScanButton_Click(object sender, RoutedEventArgs e)
         {
@@ -214,8 +214,8 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento QuerySubmitted del SearchBox
-        /// Filtra los procesos según el texto de búsqueda
+        /// QuerySubmitted event handler for the SearchBox
+        /// Filters processes based on search text
         /// </summary>
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
         {
@@ -234,8 +234,8 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento TextChanged del SearchBox
-        /// Actualiza las sugerencias de búsqueda
+        /// TextChanged event handler for the SearchBox
+        /// Updates search suggestions
         /// </summary>
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
@@ -253,8 +253,8 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento SuggestionChosen del SearchBox
-        /// Establece el texto seleccionado en el SearchBox
+        /// SuggestionChosen event handler for the SearchBox
+        /// Sets the selected text in the SearchBox
         /// </summary>
         private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
         {
@@ -265,7 +265,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Click para ordenar por nombre
+        /// Click event handler to sort by name
         /// </summary>
         private void OrderBy_Name(object sender, RoutedEventArgs e)
         {
@@ -276,7 +276,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Click para ordenar por ID
+        /// Click event handler to sort by ID
         /// </summary>
         private void OrderBy_Id(object sender, RoutedEventArgs e)
         {
@@ -287,7 +287,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Checked del CheckBox de proceso
+        /// Checked event handler for the process CheckBox
         /// </summary>
         private void ProcessCheckBox_Checked(object sender, RoutedEventArgs e)
         {
@@ -295,7 +295,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Unchecked del CheckBox de proceso
+        /// Unchecked event handler for the process CheckBox
         /// </summary>
         private void ProcessCheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
@@ -303,7 +303,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento ItemClick del ListView de procesos
+        /// ItemClick event handler for the process ListView
         /// </summary>
         private void ProcessListView_ItemClick(object sender, ItemClickEventArgs e)
         {
@@ -314,7 +314,7 @@ namespace Plantilla.Pages.Processes
         }
 
         /// <summary>
-        /// Manejador del evento Click para ver detalles de un proceso
+        /// Click event handler to view process details
         /// </summary>
         private async void ViewDetails_Click(object sender, RoutedEventArgs e)
         {

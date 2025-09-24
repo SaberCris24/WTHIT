@@ -7,82 +7,91 @@
     xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
 
-    <StackPanel Margin="24">
-        <!-- Título principal "About" -->
-        <TextBlock Text="About"
-                 Style="{ThemeResource TitleLargeTextBlockStyle}"
-                 FontSize="40"
-                 FontWeight="Bold"
-                 Margin="80,25,0,0"/>
+    <!-- ScrollViewer to allow vertical scrolling -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  ZoomMode="Disabled">
+        
+        <StackPanel Margin="24">
+            <!-- Main title "About" -->
+            <TextBlock Text="About"
+                     Style="{ThemeResource TitleLargeTextBlockStyle}"
+                     FontSize="40"
+                     FontWeight="Bold"
+                     Margin="80,25,0,0"/>
 
-        <!-- Descripción del programa -->
-        <TextBlock
-                  Margin="80,25,80,0"
-                  Style="{ThemeResource BodyTextBlockStyle}"    
-                  TextWrapping="Wrap"
-                  Text="WTHIT (What The Hell Is This) is a powerful system monitoring tool that allows you to explore and understand the processes running on your PC. It helps you identify which applications are associated with running processes, scan files using the VirusTotal API to detect potential malicious content, and provides detailed information about all active processes in your system." />
+            <!-- Program description -->
+            <TextBlock
+                      Margin="80,25,80,0"
+                      Style="{ThemeResource BodyTextBlockStyle}"    
+                      TextWrapping="Wrap"
+                      Text="WTHIT (What The Hell Is This) is a powerful system monitoring tool that allows you to explore and understand the processes running on your PC. It helps you identify which applications are associated with running processes, scan files using the VirusTotal API to detect potential malicious content, and provides detailed information about all active processes in your system." />
 
-        <!-- Subtítulo "More information" -->
-        <TextBlock Text="More information"
-                 Style="{ThemeResource SubtitleTextBlockStyle}"
-                 FontWeight="SemiBold"
-                 Opacity="0.9"
-                 Margin="80,25,0,16"/>
+            <!-- Subtitle "More information" -->
+            <TextBlock Text="More information"
+                     Style="{ThemeResource SubtitleTextBlockStyle}"
+                     FontWeight="SemiBold"
+                     Opacity="0.9"
+                     Margin="80,25,0,16"/>
 
-        <!-- Contenido del SettingsExpander -->
-        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                CornerRadius="4"
-                Margin="80,0,80,8">
-            <toolkit:SettingsExpander Description="Coded With Soul by Cristian Florez and Jeremy Machado."
-                                    Header="WTHIT"
-                                    Margin="16,16,16,16">
-                <toolkit:SettingsExpander.HeaderIcon>
-                    <BitmapIcon ShowAsMonochrome="False" 
-                               UriSource="/Assets/icon.ico"/>
-                </toolkit:SettingsExpander.HeaderIcon>
-                
-                <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                         IsTextSelectionEnabled="True"
-                         Text="Version 1.0"/>
+            <!-- SettingsExpander content -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="4"
+                    Margin="80,0,80,8">
+                <toolkit:SettingsExpander Description="Coded With Soul by Cristian Florez and Jeremy Machado."
+                                        Header="WTHIT"
+                                        Margin="16,16,16,16">
+                    <toolkit:SettingsExpander.HeaderIcon>
+                        <BitmapIcon ShowAsMonochrome="False" 
+                                   UriSource="/Assets/icon.ico"/>
+                    </toolkit:SettingsExpander.HeaderIcon>
+                    
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                             IsTextSelectionEnabled="True"
+                             Text="Version 1.0"/>
 
-                <toolkit:SettingsExpander.Items>
-                    <toolkit:SettingsCard x:Name="toCloneRepoCard"
-                                        Click="CopyGitCommand_Click"
-                                        Header="To clone this repository"
-                                        IsClickEnabled="True">
-                        <TextBlock x:Name="gitCloneTextBlock"
-                                 FontFamily="Consolas"
-                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                 IsTextSelectionEnabled="True"
-                                 Text="git clone https://github.com/SaberCris24/WTHIT"/>
-                        <toolkit:SettingsCard.ActionIcon>
-                            <FontIcon Glyph="&#xE8C8;"/>
-                        </toolkit:SettingsCard.ActionIcon>
-                    </toolkit:SettingsCard>
+                    <toolkit:SettingsExpander.Items>
+                        <toolkit:SettingsCard x:Name="toCloneRepoCard"
+                                            Click="CopyGitCommand_Click"
+                                            Header="To clone this repository"
+                                            IsClickEnabled="True">
+                            <TextBlock x:Name="gitCloneTextBlock"
+                                     FontFamily="Consolas"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                     IsTextSelectionEnabled="True"
+                                     Text="git clone https://github.com/SaberCris24/WTHIT"/>
+                            <toolkit:SettingsCard.ActionIcon>
+                                <FontIcon Glyph="&#xE8C8;"/>
+                            </toolkit:SettingsCard.ActionIcon>
+                        </toolkit:SettingsCard>
 
-                    <!-- Dependecias y Referencias -->
+                        <!-- Dependencies and References -->
+                        <toolkit:SettingsCard HorizontalContentAlignment="Left"
+                                            ContentAlignment="Vertical"
+                                            Header="Dependencies &amp; references">
+                            <StackPanel Margin="-12,0,0,0" 
+                                      Orientation="Vertical">
+                                <HyperlinkButton Content="Windows App SDK" 
+                                               NavigateUri="https://github.com/microsoft/WindowsAppSDK/"/>
+                                <HyperlinkButton Content="WinUI 3" 
+                                               NavigateUri="https://github.com/microsoft/microsoft-ui-xaml"/>
+                                <HyperlinkButton Content="DevWinUI" 
+                                               NavigateUri="https://github.com/ghost1372/DevWinUI"/>
+                                <HyperlinkButton Content="Windows Community Toolkit" 
+                                               NavigateUri="https://aka.ms/toolkit/windows"/>
+                                <HyperlinkButton Content="SQLite-net" 
+                                               NavigateUri="https://github.com/praeclarum/sqlite-net?tab=readme-ov-file"/>
+                                <HyperlinkButton Content="VirusTotal API v3" 
+                                               NavigateUri="https://docs.virustotal.com/reference/overview"/>
+                            </StackPanel>
+                        </toolkit:SettingsCard>
+                    </toolkit:SettingsExpander.Items>
+                </toolkit:SettingsExpander>
+            </Border>
 
-                    <toolkit:SettingsCard HorizontalContentAlignment="Left"
-                                        ContentAlignment="Vertical"
-                                        Header="Dependencies &amp; references">
-                        <StackPanel Margin="-12,0,0,0" 
-                                  Orientation="Vertical">
-                            <HyperlinkButton Content="Windows App SDK" 
-                                           NavigateUri="https://github.com/microsoft/WindowsAppSDK/"/>
-                            <HyperlinkButton Content="WinUI 3" 
-                                           NavigateUri="https://github.com/microsoft/microsoft-ui-xaml"/>
-                            <HyperlinkButton Content="DevWinUI" 
-                                           NavigateUri="https://github.com/ghost1372/DevWinUI"/>
-                            <HyperlinkButton Content="Windows Community Toolkit" 
-                                           NavigateUri="https://aka.ms/toolkit/windows"/>
-                            <HyperlinkButton Content="SQLite-net" 
-                                           NavigateUri="https://github.com/praeclarum/sqlite-net?tab=readme-ov-file"/>
-                            <HyperlinkButton Content="VirusTotal API v3" 
-                                           NavigateUri="https://docs.virustotal.com/reference/overview"/>
-                        </StackPanel>
-                    </toolkit:SettingsCard>
-                </toolkit:SettingsExpander.Items>
-            </toolkit:SettingsExpander>
-        </Border>
-    </StackPanel>
+            <!-- Bottom spacing for better scrolling experience -->
+            <Border Height="40"/>
+            
+        </StackPanel>
+    </ScrollViewer>
 </Page>

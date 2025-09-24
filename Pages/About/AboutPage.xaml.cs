@@ -20,7 +20,7 @@ namespace Plantilla.Pages.About
 
             if (sender is SettingsCard card)
             {
-                // Guardar el header original de manera segura
+                // Save the original header safely
                 string headerText = card.Header?.ToString() ?? "Clone Repository";
                 card.Header = "Copied!";
                 

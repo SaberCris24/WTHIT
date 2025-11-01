@@ -5,33 +5,33 @@ using Plantilla.Models;
 namespace Plantilla.Services
 {
     /// <summary>
-    /// Servicio que maneja la selección y el estado de los procesos en la aplicación.
-    /// Centraliza la lógica de selección y mantiene el estado consistente.
+    /// Service that handles the selection and state of processes in the application.
+    /// Centralizes the selection logic and maintains a consistent state.
     /// </summary>
     public interface IProcessSelectionService
     {
         /// <summary>
-        /// Verifica si hay algún proceso seleccionado en la colección proporcionada
+        /// Checks if there are any selected processes in the provided collection
         /// </summary>
         bool HasSelectedProcesses(IEnumerable<ProcessItem> processes);
 
         /// <summary>
-        /// Obtiene todos los procesos seleccionados de la colección
+        /// Gets all selected processes from the collection
         /// </summary>
         List<ProcessItem> GetSelectedProcesses(IEnumerable<ProcessItem> processes);
 
         /// <summary>
-        /// Actualiza el estado de selección de un proceso específico
+        /// Updates the selection state of a specific process
         /// </summary>
         void UpdateProcessSelection(ProcessItem process, bool isSelected);
 
         /// <summary>
-        /// Limpia todas las selecciones en la colección de procesos
+        /// Clears all selections in the process collection
         /// </summary>
         void ClearSelections(IEnumerable<ProcessItem> processes);
         
         /// <summary>
-        /// Sincroniza el estado de selección entre dos colecciones de procesos
+        /// Synchronizes the selection state between two process collections
         /// </summary>
         void SyncSelectionState(IEnumerable<ProcessItem> source, IEnumerable<ProcessItem> target);
     }
@@ -39,30 +39,30 @@ namespace Plantilla.Services
     public class ProcessSelectionService : IProcessSelectionService
     {
         /// <summary>
-        /// Verifica si hay algún proceso seleccionado en la colección
+        /// Checks if there are any selected processes in the collection
         /// </summary>
-        /// <param name="processes">Colección de procesos a verificar</param>
-        /// <returns>True si hay al menos un proceso seleccionado</returns>
+        /// <param name="processes">Collection of processes to check</param>
+        /// <returns>True if there is at least one selected process</returns>
         public bool HasSelectedProcesses(IEnumerable<ProcessItem> processes)
         {
             return processes?.Any(p => p.IsSelected) ?? false;
         }
 
         /// <summary>
-        /// Obtiene la lista de procesos seleccionados
+        /// Gets the list of selected processes
         /// </summary>
-        /// <param name="processes">Colección de procesos a filtrar</param>
-        /// <returns>Lista de procesos seleccionados</returns>
+        /// <param name="processes">Collection of processes to filter</param>
+        /// <returns>List of selected processes</returns>
         public List<ProcessItem> GetSelectedProcesses(IEnumerable<ProcessItem> processes)
         {
             return processes?.Where(p => p.IsSelected).ToList() ?? new List<ProcessItem>();
         }
 
         /// <summary>
-        /// Actualiza el estado de selección de un proceso
+        /// Updates the selection state of a process
         /// </summary>
-        /// <param name="process">Proceso a actualizar</param>
-        /// <param name="isSelected">Nuevo estado de selección</param>
+        /// <param name="process">Process to update</param>
+        /// <param name="isSelected">New selection state</param>
         public void UpdateProcessSelection(ProcessItem process, bool isSelected)
         {
             if (process != null)
@@ -72,9 +72,9 @@ namespace Plantilla.Services
         }
 
         /// <summary>
-        /// Limpia todas las selecciones en la colección
+        /// Clears all selections in the collection
         /// </summary>
-        /// <param name="processes">Colección de procesos a limpiar</param>
+        /// <param name="processes">Collection of processes to clear</param>
         public void ClearSelections(IEnumerable<ProcessItem> processes)
         {
             if (processes == null) return;
@@ -86,10 +86,10 @@ namespace Plantilla.Services
         }
 
         /// <summary>
-        /// Sincroniza el estado de selección entre dos colecciones
+        /// Synchronizes the selection state between two collections
         /// </summary>
-        /// <param name="source">Colección fuente</param>
-        /// <param name="target">Colección destino</param>
+        /// <param name="source">Source collection</param>
+        /// <param name="target">Target collection</param>
         public void SyncSelectionState(IEnumerable<ProcessItem> source, IEnumerable<ProcessItem> target)
         {
             if (source == null || target == null) return;

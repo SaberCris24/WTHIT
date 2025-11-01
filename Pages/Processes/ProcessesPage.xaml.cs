@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Collections.Generic;
 using Plantilla.Services;
+using Plantilla.Pages.Home;
 
 namespace Plantilla.Pages.Processes
 {
@@ -68,7 +69,7 @@ namespace Plantilla.Pages.Processes
 
             // Initialize services
             _databaseService = new DatabaseService();
-            _virusScanService = new VirusScanService("1234"); // Replace with your real API key
+            _virusScanService = new VirusScanService("8451868b2c4776276cc141e12591dbf3776b646dc60635fd6ff7f567f60176c4"); // Replace with your real API key
             _applicationInfoService = new ApplicationInfoService();
             _processSearchService = new ProcessSearchService();
             _processDetailsDialogService = new ProcessDetailsDialogService(_virusScanService, _databaseService);
@@ -182,6 +183,11 @@ namespace Plantilla.Pages.Processes
             {
                 foreach (var process in selectedProcesses)
                 {
+                    // 1. Crear un nuevo resultado para el historial global
+                    var scanResult = new ScanResultItem { ProcessName = process.ProcessName, ScanResult = "Scanning..." };
+                    ScanResultsManager.AddScanResult(scanResult); // Añadir al manager compartido
+
+                    // 2. Mantener la lógica original para feedback inmediato en la ProcessesPage
                     process.VirusStatus = "Scanning...";
                     try
                     {
@@ -191,27 +197,35 @@ namespace Plantilla.Pages.Processes
                             var path = _processManagementService.GetProcessPath(runningProcess);
                             if (!string.IsNullOrEmpty(path) && File.Exists(path))
                             {
-                                process.VirusStatus = await _virusScanService.GetVirusTotalReportAsync(path);
+                                var result = await _virusScanService.GetVirusTotalReportAsync(path);
+                                process.VirusStatus = result; // Actualizar estado en la ProcessesPage
+                                scanResult.ScanResult = result; // Actualizar estado en el historial global
                             }
                             else
                             {
-                                process.VirusStatus = "No file path";
+                                var noPathResult = "No file path";
+                                process.VirusStatus = noPathResult;
+                                scanResult.ScanResult = noPathResult;
                             }
                         }
                         else
                         {
-                            process.VirusStatus = "Process not found";
+                            var notFoundResult = "Process not found";
+                            process.VirusStatus = notFoundResult;
+                            scanResult.ScanResult = notFoundResult;
                         }
                     }
                     catch (Exception ex)
                     {
-                        process.VirusStatus = $"Error: {ex.Message}";
+                        var errorResult = $"Error: {ex.Message}";
+                        process.VirusStatus = errorResult;
+                        scanResult.ScanResult = errorResult;
                     }
                 }
 
                 _notificationService.ShowSuccess($"Scanned {selectedProcesses.Count} process(es).");
             }
-        }
+        }   
 
         /// <summary>
         /// QuerySubmitted event handler for the SearchBox

@@ -37,10 +37,18 @@
 
                 <!-- Main menu items -->
                 <NavigationView.MenuItems>
+                    <NavigationViewItem x:Name="HomeItem"
+                                      Content="Home"
+                                      Tag="home"
+                                      IsSelected="True">
+                        <NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE80F;"/>
+                        </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    
                     <NavigationViewItem x:Name="ProcessesItem"
                                       Content="Processes"
-                                      Tag="processes"
-                                      IsSelected="True">
+                                      Tag="processes">
                         <NavigationViewItem.Icon>
                             <FontIcon Glyph="&#xE7F8;"/>
                         </NavigationViewItem.Icon>
@@ -83,7 +91,7 @@
                         Width="18"
                         Height="18"
                         VerticalAlignment="Center"
-                        Margin="8,0,0,0"/> <!-- Margin for the icon within the AppTitleBar -->
+                        Margin="8,0,0,0"/>
                     <TextBlock
                         x:Name="AppTitleTextBlock"
                         Text="WTHIT"

@@ -1,0 +1,284 @@
+<UserControl
+    x:Class="WTHIT.Controls.ScanReportView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel Spacing="12">
+
+            <Grid ColumnSpacing="16" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <ContentControl Content="{x:Bind ProcessIconElement, Mode=OneWay}" VerticalAlignment="Center"/>
+                
+                <TextBlock Grid.Column="1" 
+                           Text="{x:Bind ProcessName, Mode=OneWay}" 
+                           Style="{StaticResource TitleTextBlockStyle}" 
+                           TextTrimming="CharacterEllipsis" 
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <TextBlock Text="{x:Bind ReportSummary, Mode=OneWay}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap"/>
+            <HyperlinkButton Content="View full report on VirusTotal"
+                             NavigateUri="{x:Bind ReportUri, Mode=OneWay}"
+                             Visibility="{x:Bind HasReportLink, Mode=OneWay}"/>
+
+            <!-- Detection Stats -->
+            <Border Style="{StaticResource CardBorderStyle}" x:Name="StatsCard" Visibility="{x:Bind HasReport, Mode=OneWay}">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xEA18;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Detection Statistics" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Malicious -->
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind MaliciousCount, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Malicious" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <!-- Suspicious -->
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind SuspiciousCount, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" Foreground="{ThemeResource SystemFillColorCautionBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Suspicious" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <!-- Harmless -->
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind HarmlessCount, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Harmless" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <!-- Undetected -->
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind UndetectedCount, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Undetected" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Proportional detection bar -->
+                    <Grid Height="8" ColumnSpacing="2" Visibility="{x:Bind HasDetectionData, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{x:Bind MaliciousWidth, Mode=OneWay}"/>
+                            <ColumnDefinition Width="{x:Bind SuspiciousWidth, Mode=OneWay}"/>
+                            <ColumnDefinition Width="{x:Bind HarmlessWidth, Mode=OneWay}"/>
+                            <ColumnDefinition Width="{x:Bind UndetectedWidth, Mode=OneWay}"/>
+                        </Grid.ColumnDefinitions>
+                        <Rectangle Grid.Column="0" Fill="{ThemeResource SystemFillColorCriticalBrush}" RadiusX="2" RadiusY="2"/>
+                        <Rectangle Grid.Column="1" Fill="{ThemeResource SystemFillColorCautionBrush}" RadiusX="2" RadiusY="2"/>
+                        <Rectangle Grid.Column="2" Fill="{ThemeResource SystemFillColorSuccessBrush}" RadiusX="2" RadiusY="2"/>
+                        <Rectangle Grid.Column="3" Fill="{ThemeResource TextFillColorDisabledBrush}" RadiusX="2" RadiusY="2"/>
+                    </Grid>
+
+                    <TextBlock Text="{x:Bind EngineCountText, Mode=OneWay}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="{x:Bind HasDetectionData, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind IncompleteResults, Mode=OneWay}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Visibility="{x:Bind HasIncompleteResults, Mode=OneWay}"/>
+                </StackPanel>
+            </Border>
+
+            <Expander Header="Security engine results"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch"
+                      IsExpanded="False"
+                      Visibility="{x:Bind HasEngineResults, Mode=OneWay}">
+                <TextBlock Text="{x:Bind EngineResults, Mode=OneWay}"
+                           FontFamily="Consolas"
+                           IsTextSelectionEnabled="True"
+                           TextWrapping="Wrap"/>
+            </Expander>
+
+            <!-- Threat Names -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasThreats, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Threat Detections" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ThreatNames, Mode=OneWay}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- File Information -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasReport, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="File Information" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid RowSpacing="4" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Meaningful Name:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind MeaningfulName, Mode=OneWay}" FontSize="12" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="File Type:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind TypeDescription, Mode=OneWay}" FontSize="12" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Size:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind SizeDisplay, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Categories:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind Categories, Mode=OneWay}" FontSize="12" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Tags:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind Tags, Mode=OneWay}" FontSize="12" TextWrapping="Wrap"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Submission History -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasReport, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE823;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Submission History" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid RowSpacing="4" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="First Submitted:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind FirstSubmissionDate, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Last Submitted:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind LastSubmissionDate, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Last Analysis:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind LastAnalysisDate, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Times Submitted:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind TimesSubmitted, Mode=OneWay}" FontSize="12"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Community Reputation -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasCommunityData, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE902;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Community Reputation" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid RowSpacing="4" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Harmless Votes (%):" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind CommunityScoreText, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Reputation:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind Reputation, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Votes:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind CommunityVotesTotal, Mode=OneWay}" FontSize="12"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Votes (H / M):" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind VotesBreakdownText, Mode=OneWay}" FontSize="12"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Additional Details (Magic / TrID / ExifTool) -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasAdditionalDetails, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE713;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Additional Details" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid RowSpacing="4" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Magic:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind Magic, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="TrID:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind TrID, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="ExifTool:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ExifTool, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Hashes -->
+            <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind HasReport, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8D7;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="File Hashes" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                    <Grid RowSpacing="4" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="MD5:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind MD5, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="SHA1:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind SHA1, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="SHA256:" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind SHA256, Mode=OneWay}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

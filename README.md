@@ -2,7 +2,8 @@
 
 **WTHIT** is an educational desktop app for Windows that helps users understand what's happening behind their system. It provides clear, human-readable explanations of background processes, enriched with collaborative information and optional security scanning via VirusTotal.
 
-![image](https://github.com/user-attachments/assets/3836d299-ae00-40c3-9943-a4afc80c1748)
+<img width="1907" height="1025" alt="pasted-image-1" src="https://github.com/user-attachments/assets/a0202d31-d16a-403f-8b67-58bc7cd4ff55" />
+
 
 
 ---

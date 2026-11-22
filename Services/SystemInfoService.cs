@@ -1,271 +1,164 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
-using Plantilla.Pages.Home;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
-    /// <summary>
-    /// Interface for system information service that provides process and system data
-    /// </summary>
-    public interface ISystemInfoService
+    /// <summary>Samples running processes and compares CPU counters across dashboard refreshes.</summary>
+    public sealed class SystemInfoService : IDisposable
     {
-        /// <summary>
-        /// Gets the top processes by resource usage
-        /// </summary>
-        /// <param name="count">Number of top processes to retrieve</param>
-        /// <returns>List of top processes ordered by resource usage</returns>
-        Task<List<TopProcessItem>> GetTopProcessesByResourceAsync(int count);
-        
-        /// <summary>
-        /// Gets basic system information
-        /// </summary>
-        /// <returns>System information including process count</returns>
-        Task<SystemInfoItem> GetSystemInfoAsync();
+        public static SystemInfoService Shared { get; } = new();
 
-        /// <summary>
-        /// Clears the internal cache
-        /// </summary>
-        void ClearCache();
-        
-        /// <summary>
-        /// Gets statistics about the service
-        /// </summary>
-        /// <returns>Tuple containing process history count and last update time</returns>
-        (int ProcessHistoryCount, DateTime LastUpdate) GetStats();
-    }
+        private const double CpuScoreWeight = 2.0;
+        private const long BytesPerGiB = 1024L * 1024 * 1024;
+        private const int BytesPerUnit = 1024;
+        private static readonly string[] SizeUnits = { "B", "KB", "MB", "GB", "TB" };
 
-    /// <summary>
-    /// Service implementation for retrieving system information and process data
-    /// </summary>
-    public class SystemInfoService : ISystemInfoService
-    {
-        /// <summary>
-        /// Dictionary to track CPU usage history for processes
-        /// </summary>
-        private Dictionary<int, ProcessCpuInfo> _processCpuHistory = new Dictionary<int, ProcessCpuInfo>();
-        
-        /// <summary>
-        /// Last time the system information was updated
-        /// </summary>
-        private DateTime _lastUpdate = DateTime.Now;
+        private readonly object _sampleLock = new();
+        private Dictionary<int, CpuSample> _previousSamples = new();
+        private Dictionary<int, CpuSample> _currentSamples = new();
+        private long _previousTimestamp;
+        private DateTime _lastUpdate = DateTime.UtcNow;
+        private bool _disposed;
 
-        /// <summary>
-        /// Internal class to store CPU usage information for a process
-        /// </summary>
-        private class ProcessCpuInfo
+        private SystemInfoService() { }
+
+        /// <summary>Returns the process count and resource ranking from a single enumeration.</summary>
+        public Task<DashboardSnapshot> GetDashboardSnapshotAsync(int count) => Task.Run(() =>
         {
-            /// <summary>
-            /// Last recorded total processor time for the process
-            /// </summary>
-            public TimeSpan LastTotalProcessorTime { get; set; }
-            
-            /// <summary>
-            /// Last time the process information was updated
-            /// </summary>
-            public DateTime LastUpdateTime { get; set; }
-        }
-
-        /// <summary>
-        /// Gets the top processes by resource usage (CPU and memory)
-        /// </summary>
-        /// <param name="count">Number of top processes to retrieve</param>
-        /// <returns>List of top processes ordered by resource usage</returns>
-        public async Task<List<TopProcessItem>> GetTopProcessesByResourceAsync(int count)
-        {
-            return await Task.Run(() =>
+            lock (_sampleLock)
             {
+                if (_disposed)
+                    return new DashboardSnapshot(0, Array.Empty<ProcessUsage>());
+
                 try
                 {
-                    var processes = Process.GetProcesses();
-                    var processInfoList = new List<(string name, long memory, double cpuPercent, int id)>();
-
-                    var currentTime = DateTime.Now;
-                    var timeSinceLastUpdate = (currentTime - _lastUpdate).TotalMilliseconds;
-                    _lastUpdate = currentTime;
-
-                    foreach (var process in processes)
-                    {
-                        try
-                        {
-                            if (process.HasExited) continue;
-                            long memoryUsage = process.WorkingSet64;
-                            double cpuUsage = CalculateProcessCpuUsage(process, timeSinceLastUpdate);
-                            processInfoList.Add((process.ProcessName, memoryUsage, cpuUsage, process.Id));
-                        }
-                        catch
-                        {
-                            continue;
-                        }
-                    }
-
-                    var topProcesses = processInfoList
-                        .OrderByDescending(p => (p.cpuPercent * 2) + (p.memory / (1024.0 * 1024.0 * 1024.0)))
-                        .Take(count)
-                        .Select(p => new TopProcessItem
-                        {
-                            ProcessId = p.id,
-                            ProcessName = p.name,
-                            CpuUsageValue = p.cpuPercent,
-                            CpuUsage = $"{p.cpuPercent:F1}%",
-                            MemoryUsageValue = p.memory,
-                            MemoryUsage = FormatBytes(p.memory)
-                        })
-                        .ToList();
-
-                    CleanupOldProcessHistory(processes.Select(p => p.Id).ToHashSet());
-                    return topProcesses;
+                    return ReadSnapshot(count);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error getting top processes: {ex.Message}");
-                    return new List<TopProcessItem>();
+                    return new DashboardSnapshot(0, Array.Empty<ProcessUsage>());
                 }
-            });
-        }
+                finally
+                {
+                    _currentSamples.Clear();
+                }
+            }
+        });
 
-        /// <summary>
-        /// Calculates the CPU usage percentage for a process
-        /// </summary>
-        /// <param name="process">The process to calculate CPU usage for</param>
-        /// <param name="timeSinceLastUpdate">Time elapsed since last update in milliseconds</param>
-        /// <returns>CPU usage percentage</returns>
-        private double CalculateProcessCpuUsage(Process process, double timeSinceLastUpdate)
+        /// <summary>Contains the total process count and the highest resource consumers.</summary>
+        public readonly record struct DashboardSnapshot(int TotalProcesses, IReadOnlyList<ProcessUsage> TopProcesses);
+
+        /// <summary>Contains one ranked process and its sampled resource usage.</summary>
+        public readonly record struct ProcessUsage(int Id, string Name, double Cpu, long Memory, string FormattedMemory);
+
+        private DashboardSnapshot ReadSnapshot(int count)
         {
+            var processes = Process.GetProcesses();
+            long timestamp = Stopwatch.GetTimestamp();
+            var ranked = new List<(int Id, string Name, double Cpu, long Memory)>(processes.Length);
+            double elapsed = _previousTimestamp == 0 ? 0 : Stopwatch.GetElapsedTime(_previousTimestamp, timestamp).TotalMilliseconds;
+
             try
             {
-                var currentTotalProcessorTime = process.TotalProcessorTime;
-                var processId = process.Id;
-
-                if (_processCpuHistory.ContainsKey(processId))
+                foreach (var process in processes)
                 {
-                    var previousInfo = _processCpuHistory[processId];
-                    var timeDiff = (currentTotalProcessorTime - previousInfo.LastTotalProcessorTime).TotalMilliseconds;
-
-                    double cpuUsage = 0;
-                    if (timeSinceLastUpdate > 0)
+                    try
                     {
-                        cpuUsage = (timeDiff / timeSinceLastUpdate / Environment.ProcessorCount) * 100.0;
-                        cpuUsage = Math.Min(Math.Max(cpuUsage, 0), 100);
+                        int id = process.Id;
+                        string name = process.ProcessName;
+                        long memory = process.WorkingSet64;
+                        var sample = new CpuSample(name, process.TotalProcessorTime);
+                        _currentSamples[id] = sample;
+                        ranked.Add((id, name, CalculateCpuUsage(id, sample, elapsed), memory));
                     }
-
-                    _processCpuHistory[processId] = new ProcessCpuInfo
+                    catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
                     {
-                        LastTotalProcessorTime = currentTotalProcessorTime,
-                        LastUpdateTime = DateTime.Now
-                    };
-
-                    return cpuUsage;
-                }
-                else
-                {
-                    _processCpuHistory[processId] = new ProcessCpuInfo
-                    {
-                        LastTotalProcessorTime = currentTotalProcessorTime,
-                        LastUpdateTime = DateTime.Now
-                    };
-                    return 0;
+                        Debug.WriteLine($"Failed to read a process: {ex.Message}");
+                    }
                 }
             }
-            catch
+            finally
             {
+                foreach (var process in processes)
+                    process.Dispose();
+            }
+
+            // Compare only consecutive samples so exited and inaccessible processes leave no CPU history.
+            (_previousSamples, _currentSamples) = (_currentSamples, _previousSamples);
+            _previousTimestamp = timestamp;
+            _lastUpdate = DateTime.UtcNow;
+
+            ranked.Sort((a, b) => Score(b.Cpu, b.Memory).CompareTo(Score(a.Cpu, a.Memory)));
+
+            int topCount = Math.Clamp(count, 0, ranked.Count);
+            var topProcesses = new ProcessUsage[topCount];
+            for (int i = 0; i < topCount; i++)
+            {
+                var process = ranked[i];
+                topProcesses[i] = new ProcessUsage(process.Id, process.Name, process.Cpu, process.Memory, FormatBytes(process.Memory));
+            }
+
+            return new DashboardSnapshot(processes.Length, topProcesses);
+        }
+
+        /// <summary>Computes the share of total machine CPU used since the previous sample.</summary>
+        private double CalculateCpuUsage(int processId, CpuSample sample, double elapsedMilliseconds)
+        {
+            if (elapsedMilliseconds <= 0 || !_previousSamples.TryGetValue(processId, out var previous) ||
+                !string.Equals(previous.Name, sample.Name, StringComparison.Ordinal))
                 return 0;
-            }
+
+            double consumedMilliseconds = (sample.TotalProcessorTime - previous.TotalProcessorTime).TotalMilliseconds;
+            return Math.Clamp(100.0 * consumedMilliseconds / elapsedMilliseconds / Environment.ProcessorCount, 0, 100);
         }
 
-        /// <summary>
-        /// Removes process history for processes that no longer exist or are outdated
-        /// </summary>
-        /// <param name="currentProcessIds">Set of current process IDs</param>
-        private void CleanupOldProcessHistory(HashSet<int> currentProcessIds)
-        {
-            var idsToRemove = _processCpuHistory.Keys
-                .Where(id => !currentProcessIds.Contains(id))
-                .ToList();
+        private static double Score(double cpu, long memory) => cpu * CpuScoreWeight + (double)memory / BytesPerGiB;
 
-            foreach (var id in idsToRemove)
-            {
-                _processCpuHistory.Remove(id);
-            }
-
-            var oneMinuteAgo = DateTime.Now.AddMinutes(-1);
-            var oldIds = _processCpuHistory
-                .Where(kvp => kvp.Value.LastUpdateTime < oneMinuteAgo)
-                .Select(kvp => kvp.Key)
-                .ToList();
-
-            foreach (var id in oldIds)
-            {
-                _processCpuHistory.Remove(id);
-            }
-        }
-
-        /// <summary>
-        /// Gets basic system information
-        /// </summary>
-        /// <returns>System information including process count</returns>
-        public async Task<SystemInfoItem> GetSystemInfoAsync()
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    var totalProcesses = Process.GetProcesses().Length;
-
-                    return new SystemInfoItem
-                    {
-                        TotalProcesses = totalProcesses
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error getting system info: {ex.Message}");
-                    return new SystemInfoItem
-                    {
-                        TotalProcesses = 0
-                    };
-                }
-            });
-        }
-
-        /// <summary>
-        /// Formats bytes into a human-readable string with appropriate unit
-        /// </summary>
-        /// <param name="bytes">Number of bytes to format</param>
-        /// <returns>Formatted string with appropriate unit</returns>
-        private string FormatBytes(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            double len = bytes;
-            int order = 0;
-
-            while (len >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                len = len / 1024;
-            }
-
-            return $"{len:F1} {sizes[order]}";
-        }
-
-        /// <summary>
-        /// Clears the internal cache of process CPU history
-        /// </summary>
         public void ClearCache()
         {
-            _processCpuHistory.Clear();
-            _lastUpdate = DateTime.Now;
+            lock (_sampleLock)
+            {
+                _previousSamples.Clear();
+                _currentSamples.Clear();
+                _previousTimestamp = 0;
+                _lastUpdate = DateTime.UtcNow;
+            }
         }
 
-        /// <summary>
-        /// Gets statistics about the service
-        /// </summary>
-        /// <returns>Tuple containing process history count and last update time</returns>
         public (int ProcessHistoryCount, DateTime LastUpdate) GetStats()
         {
-            return (_processCpuHistory.Count, _lastUpdate);
+            lock (_sampleLock)
+                return (_previousSamples.Count, _lastUpdate);
         }
+
+        public void Dispose()
+        {
+            lock (_sampleLock)
+            {
+                if (_disposed) return;
+                _disposed = true;
+                ClearCache();
+            }
+
+            GC.SuppressFinalize(this);
+        }
+
+        private static string FormatBytes(long bytes)
+        {
+            double size = bytes;
+            int unit = 0;
+            while (size >= BytesPerUnit && unit < SizeUnits.Length - 1)
+            {
+                size /= BytesPerUnit;
+                unit++;
+            }
+
+            return $"{size:F1} {SizeUnits[unit]}";
+        }
+
+        private readonly record struct CpuSample(string Name, TimeSpan TotalProcessorTime);
     }
 }

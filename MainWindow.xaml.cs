@@ -1,170 +1,255 @@
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Plantilla.Helpers;
-using Plantilla.Pages;
-using Plantilla.Pages.About;
-using Plantilla.Pages.Home;
-using Plantilla.Pages.Processes;
-using Plantilla.Pages.Settings;
+using Microsoft.UI.Xaml.Navigation;
+using WTHIT.Core;
+using WTHIT.Helpers;
+using WTHIT.Pages;
+using WTHIT.Pages.Home;
+using WTHIT.Pages.Processes;
+using WTHIT.Pages.About;
+using WTHIT.Pages.Settings;
+using WTHIT.Services;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
-namespace Plantilla
+namespace WTHIT
 {
-    /// <summary>
-    /// Main window of the application that handles navigation, theme setup, and window configuration
-    /// </summary>
-    public sealed partial class MainWindow : Window
+    public sealed partial class MainWindow : Window, IDisposable
     {
-        #region Properties
-        /// <summary>
-        /// Gets the NavigationView control used for app navigation
-        /// </summary>
+        private bool _disposed;
+        private bool _eventsRegistered;
+        private readonly AppWindowTitleBar? _titleBar;
+
+        private static readonly Dictionary<string, Type> _pages = new()
+        {
+            ["home"] = typeof(HomePage),
+            ["processes"] = typeof(ProcessesPage),
+            ["about"] = typeof(AboutPage)
+        };
+
+        private static readonly Type DefaultPage = typeof(HomePage);
+
         public NavigationView NavigationViewControl => NavView;
-        
-        /// <summary>
-        /// Helper class for managing navigation
-        /// </summary>
-        private NavigationHelper _navigationHelper;
-        #endregion
 
         /// <summary>
-        /// Initializes a new instance of the MainWindow class with specified minimum dimensions
+        /// Shows a dialog inside the window's full root grid. Popup placement can inherit a
+        /// reduced layout area when a custom title bar and NavigationView are present, which
+        /// leaves dialogs visually aligned to the left instead of to the whole window.
         /// </summary>
-        /// <param name="MinWidth">Minimum width of the window</param>
-        /// <param name="MinHeight">Minimum height of the window</param>
-        public MainWindow(int MinWidth, int MinHeight)
+        public async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
         {
+            ArgumentNullException.ThrowIfNull(dialog);
+
+            DialogHost.Children.Add(dialog);
             try
             {
-                this.InitializeComponent();
+                return await dialog.ShowAsync(ContentDialogPlacement.InPlace);
+            }
+            finally
+            {
+                DialogHost.Children.Remove(dialog);
+            }
+        }
 
-                // Initialize NavigationRootPage with the NavigationView
-                NavigationRootPage.Initialize(NavView);
+        public MainWindow()
+        {
+            InitializeComponent();
 
-                // Initialize navigation helper - must be after InitializeComponent to ensure NavView exists
-                _navigationHelper = new NavigationHelper(NavView);
+            WindowSetupHelper.SetupWindow(this, 1000, 500, 1000, 500);
+            WindowSetupHelper.SetupWindowIcon(this);
 
-                // Set up window components
-                WindowSetupHelper.SetupTitleBar(this, AppTitleBar);
-                WindowSetupHelper.SetupWindowSize(this, MinWidth, MinHeight);
-                WindowSetupHelper.SetupWindowIcon(this);
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(AppTitleBar);
 
-                // Setup theme
-                SetupTheme();
-
-                // Navigate to Home page by default
-                contentFrame.Navigate(typeof(HomePage));
-
-                // Initialize NavigationView position based on saved configuration
-                bool isLeftMode = NavigationOrientationHelper.IsLeftMode();
-                NavigationOrientationHelper.IsLeftModeForElement(isLeftMode, NavView);
-
-                // Subscribe to events
-                NavView.DisplayModeChanged += NavView_DisplayModeChanged;
-                if (Content is FrameworkElement rootElement)
-                {
-                    rootElement.ActualThemeChanged += MainWindow_ActualThemeChanged;
-                }
+            try
+            {
+                _titleBar = AppWindow?.TitleBar;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing MainWindow: {ex.Message}");
-                throw; // Re-throw to ensure window creation fails if initialization fails
+                Debug.WriteLine($"Error obteniendo TitleBar: {ex.Message}");
             }
+
+            NavigationManager.Instance.Initialize(NavView);
+            NotificationService.Instance.Initialize(NotificationHost);
+
+            NavigationManager.Instance.PositionChanged += NavigationManager_PositionChanged;
+
+            SetupEventHandlers();
+
+            ApplyTitleBarLayout(NavigationManager.Instance.IsLeftMode);
+
+            contentFrame.Navigate(DefaultPage);
         }
 
-        /// <summary>
-        /// Saves the current navigation view position
-        /// </summary>
-        /// <param name="isLeftMode">Whether the navigation view should be in left mode</param>
-        public void SaveNavigationViewPosition(bool isLeftMode)
+        private void SetupEventHandlers()
         {
-            NavigationOrientationHelper.IsLeftModeForElement(isLeftMode, NavView);
-        }
+            if (_eventsRegistered) return;
+            _eventsRegistered = true;
 
-        /// <summary>
-        /// Updates the navigation view mode
-        /// </summary>
-        /// <param name="isLeftMode">Whether the navigation view should be in left mode</param>
-        public void UpdateNavigationViewMode(bool isLeftMode)
-        {
-            NavigationOrientationHelper.UpdateNavigationViewForElement(isLeftMode, NavView);
-        }
+            NavView.BackRequested += NavView_BackRequested;
+            NavView.SelectionChanged += NavView_SelectionChanged;
+            contentFrame.Navigated += contentFrame_Navigated;
 
-        /// <summary>
-        /// Sets up the theme for the application based on saved preferences
-        /// </summary>
-        private void SetupTheme()
-        {
             if (Content is FrameworkElement rootElement)
             {
-                ElementTheme savedTheme = ThemeHelper.LoadSavedTheme();
-                rootElement.RequestedTheme = savedTheme;
-                ThemeHelper.UpdateCaptionButtonsForTheme(this, rootElement.ActualTheme);
+                rootElement.ActualThemeChanged += RootElement_ActualThemeChanged;
+                UpdateCaptionButtons(rootElement.ActualTheme);
+            }
+
+            this.Activated += MainWindow_Activated;
+            this.Closed += MainWindow_Closed;
+        }
+
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            TitleBarHelper.UpdateForWindowActivation(this, args.WindowActivationState != WindowActivationState.Deactivated);
+        }
+
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            WindowSetupHelper.SaveWindowPosition(this);
+            (contentFrame.Content as IDisposable)?.Dispose();
+
+            if (App.Current is App app)
+            {
+                app.Dispose();
+            }
+
+            Dispose();
+        }
+
+        public void SaveNavigationViewPosition(bool isLeftMode) =>
+            NavigationManager.Instance.SetPosition(NavView, isLeftMode);
+
+        public void UpdateNavigationViewMode(bool isLeftMode) =>
+            NavigationManager.Instance.UpdatePosition(NavView, isLeftMode);
+
+        private void NavigationManager_PositionChanged(object? sender, bool isLeftMode) =>
+            ApplyTitleBarLayout(isLeftMode);
+
+        /// <summary>
+        /// Places top navigation below the title bar and lets side navigation span both rows.
+        /// </summary>
+        private void ApplyTitleBarLayout(bool isLeftMode)
+        {
+            if (isLeftMode)
+            {
+                AppTitleBar.Margin = new Thickness(48, 0, 0, 0);
+                Grid.SetRow(AppTitleBar, 0);
+                Grid.SetRowSpan(AppTitleBar, 1);
+                Grid.SetRow(NavView, 0);
+                Grid.SetRowSpan(NavView, 2);
+            }
+            else
+            {
+                AppTitleBar.Margin = new Thickness(16, 0, 0, 0);
+                Grid.SetRow(AppTitleBar, 0);
+                Grid.SetRowSpan(AppTitleBar, 1);
+                Grid.SetRow(NavView, 1);
+                Grid.SetRowSpan(NavView, 1);
             }
         }
 
-        /// <summary>
-        /// Handles the ActualThemeChanged event of the main window
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="args">Event arguments</param>
-        private void MainWindow_ActualThemeChanged(FrameworkElement sender, object args)
+        private void RootElement_ActualThemeChanged(FrameworkElement sender, object args) =>
+            UpdateCaptionButtons(sender.ActualTheme);
+
+        private void UpdateCaptionButtons(ElementTheme theme)
         {
+            if (_titleBar is null) return;
+
             try
             {
-                ThemeHelper.UpdateCaptionButtonsForTheme(this, sender.ActualTheme);
+                var effectiveTheme = ThemeManager.GetEffectiveTheme(theme);
+                var color = effectiveTheme == ElementTheme.Dark ? Colors.White : Colors.Black;
+
+                _titleBar.ButtonForegroundColor = color;
+                _titleBar.ButtonHoverForegroundColor = color;
+                _titleBar.ButtonPressedForegroundColor = color;
+                _titleBar.ButtonInactiveForegroundColor = Colors.Gray;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error handling theme change: {ex.Message}");
+                Debug.WriteLine($"Failed to update the title bar buttons: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Handles the DisplayModeChanged event of the NavigationView
-        /// </summary>
-        /// <param name="sender">The NavigationView control</param>
-        /// <param name="args">Event arguments containing display mode information</param>
-        private void NavView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
+        private void NavView_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
         {
-
+            if (contentFrame.CanGoBack)
+            {
+                contentFrame.GoBack();
+            }
         }
 
-        /// <summary>
-        /// Handles the SelectionChanged event of the NavigationView
-        /// Navigates to the appropriate page based on the selected item
-        /// </summary>
-        /// <param name="sender">The NavigationView control</param>
-        /// <param name="args">Event arguments containing selection information</param>
+        private void contentFrame_Navigated(object sender, NavigationEventArgs e)
+        {
+            NavView.SelectionChanged -= NavView_SelectionChanged;
+
+            try
+            {
+                NavView.IsBackEnabled = contentFrame.CanGoBack;
+                NavView.Header = null;
+
+                NavView.SelectedItem = contentFrame.CurrentSourcePageType switch
+                {
+                    Type t when t == typeof(HomePage) => HomeItem,
+                    Type t when t == typeof(ProcessesPage) => ProcessesItem,
+                    Type t when t == typeof(AboutPage) => AboutItem,
+                    Type t when t == typeof(SettingsPage) => NavView.SettingsItem,
+                    _ => null
+                };
+            }
+            finally
+            {
+                NavView.SelectionChanged += NavView_SelectionChanged;
+            }
+        }
+
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            try
+            Type? targetType = null;
+
+            if (args.IsSettingsSelected)
             {
-                if (args.IsSettingsSelected)
-                {
-                    contentFrame.Navigate(typeof(SettingsPage));
-                }
-                else if (args.SelectedItem is NavigationViewItem selectedItem)
-                {
-                    switch (selectedItem.Tag.ToString())
-                    {
-                        case "home":
-                            contentFrame.Navigate(typeof(HomePage));
-                            break;
-                        case "processes":
-                            contentFrame.Navigate(typeof(ProcessesPage));
-                            break;
-                        case "about":
-                            contentFrame.Navigate(typeof(AboutPage));
-                            break;
-                    }
-                }
+                targetType = typeof(SettingsPage);
             }
-            catch (Exception ex)
+            else if (args.SelectedItem is NavigationViewItem selectedItem && selectedItem.Tag is string tag)
             {
-                System.Diagnostics.Debug.WriteLine($"Error handling navigation: {ex.Message}");
+                _pages.TryGetValue(tag, out targetType);
             }
+
+            if (targetType != null && contentFrame.CurrentSourcePageType != targetType)
+            {
+                contentFrame.Navigate(targetType);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            NotificationService.Instance.Detach(NotificationHost);
+            NavigationManager.Instance.PositionChanged -= NavigationManager_PositionChanged;
+
+            NavView.BackRequested -= NavView_BackRequested;
+            NavView.SelectionChanged -= NavView_SelectionChanged;
+            contentFrame.Navigated -= contentFrame_Navigated;
+
+            if (Content is FrameworkElement rootElement)
+            {
+                rootElement.ActualThemeChanged -= RootElement_ActualThemeChanged;
+            }
+
+            this.Activated -= MainWindow_Activated;
+            this.Closed -= MainWindow_Closed;
+
+            GC.SuppressFinalize(this);
         }
     }
 }

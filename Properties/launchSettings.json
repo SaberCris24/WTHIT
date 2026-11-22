@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "Plantilla (Package)": {
+    "WTHIT (Package)": {
       "commandName": "MsixPackage"
     },
-    "Plantilla (Unpackaged)": {
+    "WTHIT (Unpackaged)": {
       "commandName": "Project"
     }
   }

@@ -1,63 +1,130 @@
-using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using WTHIT.Core;
 using System;
 using System.Runtime.InteropServices;
 using WinRT.Interop;
+using Windows.Graphics;
 
-namespace Plantilla.Helpers
+namespace WTHIT.Helpers
 {
     /// <summary>
-    /// Helper class for setting up window properties such as icon, size, and title bar
+    /// Comprehensive window management helper - optimized
     /// </summary>
-    public static class WindowSetupHelper
+    internal static class WindowSetupHelper
     {
-        #region Win32 API
-
-        /// <summary>
-        /// Sends a message to a window or windows
-        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
-        /// <summary>
-        /// Loads an icon, cursor, or bitmap
-        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
-        /// <summary>
-        /// Message to set the window icon
-        /// </summary>
         private const int WM_SETICON = 0x0080;
-        
-        /// <summary>
-        /// Image type constant for icons
-        /// </summary>
         private const uint IMAGE_ICON = 1;
-        
-        /// <summary>
-        /// Load flag to load image from file
-        /// </summary>
         private const uint LR_LOADFROMFILE = 0x00000010;
 
-        #endregion
+        public static void SetupWindow(Window window, int initialWidth, int initialHeight, int minWidth = 800, int minHeight = 400, string settingsKey = "WindowPosition")
+        {
+            if (window == null) return;
 
-        /// <summary>
-        /// Sets up the window icon from an ICO file
-        /// </summary>
-        /// <param name="window">The window to set the icon for</param>
-        public static void SetupWindowIcon(Window window)
+            try
+            {
+                var appWindow = window.AppWindow;
+                if (appWindow == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Failed to get AppWindow");
+                    return;
+                }
+
+                if (appWindow.Presenter is OverlappedPresenter presenter)
+                {
+                    presenter.IsResizable = true;
+                    presenter.IsMaximizable = true;
+                    presenter.IsMinimizable = true;
+                    presenter.IsModal = false;
+                    var (x, y, width, height, isMaximized) = LoadWindowState(settingsKey, initialWidth, initialHeight);
+                    var rect = GetVisibleBounds(new RectInt32(x, y, width, height), initialWidth, initialHeight, minWidth, minHeight);
+                    presenter.PreferredMinimumWidth = Math.Min(minWidth, rect.Width);
+                    presenter.PreferredMinimumHeight = Math.Min(minHeight, rect.Height);
+
+                    // Set the restored bounds before maximizing so Windows remembers them.
+                    appWindow.MoveAndResize(rect);
+
+                    if (isMaximized)
+                    {
+                        presenter.Maximize();
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting up window: {ex.Message}");
+            }
+        }
+
+        /// <summary>Fits restored bounds to a connected display or centers them on the primary display.</summary>
+        private static RectInt32 GetVisibleBounds(RectInt32 saved, int defaultWidth, int defaultHeight, int minWidth, int minHeight)
+        {
+            var savedDisplay = DisplayArea.GetFromRect(saved, DisplayAreaFallback.None);
+            var display = savedDisplay ?? DisplayArea.Primary;
+            var work = display.WorkArea;
+            var screen = display.OuterBounds;
+            int left = screen.X + work.X;
+            int top = screen.Y + work.Y;
+            int width = Math.Clamp(savedDisplay == null ? defaultWidth : saved.Width, Math.Min(minWidth, work.Width), work.Width);
+            int height = Math.Clamp(savedDisplay == null ? defaultHeight : saved.Height, Math.Min(minHeight, work.Height), work.Height);
+            int x = savedDisplay == null ? left + (work.Width - width) / 2 : Math.Clamp(saved.X, left, left + work.Width - width);
+            int y = savedDisplay == null ? top + (work.Height - height) / 2 : Math.Clamp(saved.Y, top, top + work.Height - height);
+            return new RectInt32(x, y, width, height);
+        }
+
+        private static (int X, int Y, int Width, int Height, bool IsMaximized) LoadWindowState(string settingsKey, int defaultWidth, int defaultHeight)
         {
             try
             {
+                var settings = SettingsManager.Instance;
+
+                int x = settings.GetValue($"{settingsKey}_X", 100);
+                int y = settings.GetValue($"{settingsKey}_Y", 100);
+                int width = settings.GetValue($"{settingsKey}_Width", defaultWidth);
+                int height = settings.GetValue($"{settingsKey}_Height", defaultHeight);
+                bool isMaximized = settings.GetValue($"{settingsKey}_IsMaximized", false);
+
+                // Use a default size when the saved dimensions are invalid.
+                if (width <= 0) width = defaultWidth;
+                if (height <= 0) height = defaultHeight;
+
+                return (x, y, width, height, isMaximized);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading window state: {ex.Message}");
+                return (100, 100, defaultWidth, defaultHeight, false);
+            }
+        }
+
+        public static void SetupWindowIcon(Window window)
+        {
+            if (window == null) return;
+
+            try
+            {
                 var hwnd = WindowNative.GetWindowHandle(window);
-                string iconPath = System.IO.Path.Combine(Environment.CurrentDirectory, "Assets", "icon.ico");
-                
-                IntPtr hIcon = LoadImage(IntPtr.Zero, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-                
-                SendMessage(hwnd, WM_SETICON, (IntPtr)1, hIcon);
-                SendMessage(hwnd, WM_SETICON, (IntPtr)0, hIcon);
+                var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "icon.ico");
+
+                if (!System.IO.File.Exists(iconPath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Icon file not found: {iconPath}");
+                    return;
+                }
+
+                var hIcon = LoadImage(IntPtr.Zero, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+                if (hIcon != IntPtr.Zero)
+                {
+                    SendMessage(hwnd, WM_SETICON, (IntPtr)1, hIcon);
+                    SendMessage(hwnd, WM_SETICON, (IntPtr)0, hIcon);
+                }
             }
             catch (Exception ex)
             {
@@ -65,59 +132,37 @@ namespace Plantilla.Helpers
             }
         }
 
-        /// <summary>
-        /// Sets up the window size and minimum size constraints
-        /// </summary>
-        /// <param name="window">The window to set up</param>
-        /// <param name="MinWidth">Minimum width of the window</param>
-        /// <param name="MinHeight">Minimum height of the window</param>
-        public static void SetupWindowSize(Window window, int MinWidth, int MinHeight)
+        public static void SaveWindowPosition(Window window, string settingsKey = "WindowPosition")
         {
+            if (window?.AppWindow == null) return;
+
             try
             {
-                var presenter = OverlappedPresenter.Create();
-                presenter.IsResizable = true;
-                presenter.PreferredMinimumHeight = MinHeight;
-                presenter.PreferredMinimumWidth = MinWidth;
-                presenter.IsMaximizable = true;
-                presenter.IsMinimizable = true;
+                var appWindow = window.AppWindow;
+                if (appWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized })
+                    return;
 
-                var hwnd = WindowNative.GetWindowHandle(window);
-                var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
-                var appWindow = AppWindow.GetFromWindowId(windowId);
-                
-                appWindow.Resize(new Windows.Graphics.SizeInt32(MinWidth, MinHeight));
-                
-                window.AppWindow.SetPresenter(presenter);
+                var settings = SettingsManager.Instance;
+
+                bool isMaximized = appWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+                settings.SetValue($"{settingsKey}_IsMaximized", isMaximized);
+
+                // Keep the restored bounds when the window is maximized.
+                if (!isMaximized)
+                {
+                    var position = appWindow.Position;
+                    var size = appWindow.Size;
+                    settings.SetValue($"{settingsKey}_X", position.X);
+                    settings.SetValue($"{settingsKey}_Y", position.Y);
+                    settings.SetValue($"{settingsKey}_Width", size.Width);
+                    settings.SetValue($"{settingsKey}_Height", size.Height);
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error setting up window size: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error saving window position: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Sets up the title bar with custom styling
-        /// </summary>
-        /// <param name="window">The window to set up the title bar for</param>
-        /// <param name="titleBarElement">UI element to use as the custom title bar</param>
-        public static void SetupTitleBar(Window window, UIElement titleBarElement)
-        {
-            try
-            {
-                window.ExtendsContentIntoTitleBar = true;
-                window.SetTitleBar(titleBarElement);
-
-                window.AppWindow.Title = "WTHIT";
-                window.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
-                window.AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-
-                TitleBarHelper.SetBackgroundColor(window, Colors.Transparent);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error setting up title bar: {ex.Message}");
-            }
-        }
     }
 }

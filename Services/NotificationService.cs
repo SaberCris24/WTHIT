@@ -1,117 +1,112 @@
-using Microsoft.UI.Xaml.Controls;
 using System;
+using System.Collections.ObjectModel;
+using Microsoft.UI.Xaml.Controls;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
-    /// <summary>
-    /// Interface for managing notifications in the application
-    /// </summary>
-    public interface INotificationService
+    public enum NotificationSeverity
     {
-        /// <summary>
-        /// Sets up the InfoBar control for notifications
-        /// </summary>
-        void Initialize(InfoBar infoBar);
-
-        /// <summary>
-        /// Shows an error notification
-        /// </summary>
-        void ShowError(string message);
-
-        /// <summary>
-        /// Shows a success notification
-        /// </summary>
-        void ShowSuccess(string message);
-
-        /// <summary>
-        /// Shows a warning notification
-        /// </summary>
-        void ShowWarning(string message);
-
-        /// <summary>
-        /// Shows an information notification
-        /// </summary>
-        void ShowInformation(string message);
-
-        /// <summary>
-        /// Clears the current notification
-        /// </summary>
-        void Clear();
+        Info,
+        Success,
+        Warning,
+        Error
     }
 
-    /// <summary>
-    /// Service for displaying notifications using InfoBar
-    /// </summary>
-    public class NotificationService : INotificationService
+    /// <summary>Queues transient notifications in the main window's overlay.</summary>
+    public sealed class NotificationService
     {
-        // InfoBar control reference
-        private InfoBar? _infoBar;
+        public static NotificationService Instance { get; } = new();
 
-        /// <summary>
-        /// Sets up the InfoBar for notifications
-        /// </summary>
-        public void Initialize(InfoBar infoBar)
+        private readonly ObservableCollection<NotificationItem> _notifications = new();
+        private WeakReference<ItemsControl>? _host;
+        private ItemsControl? Host => _host != null && _host.TryGetTarget(out var host) ? host : null;
+
+        private string? _lastMessage;
+        private NotificationSeverity _lastSeverity;
+        private DateTimeOffset _lastShownAt;
+
+        private const int MaxConcurrent = 3;
+        private const int MaxMessageLength = 500;
+        private static readonly TimeSpan DuplicateInterval = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(4);
+        private static readonly TimeSpan ErrorDuration = TimeSpan.FromSeconds(7);
+
+        private NotificationService() { }
+
+        /// <summary>Attaches the notification queue for the lifetime of the window.</summary>
+        public void Initialize(ItemsControl host)
         {
-            _infoBar = infoBar ?? throw new ArgumentNullException(nameof(infoBar));
+            if (Host is { } previousHost)
+            {
+                if (ReferenceEquals(previousHost, host))
+                    return;
+
+                Detach(previousHost);
+            }
+
+            _host = new WeakReference<ItemsControl>(host);
+            host.ItemsSource = _notifications;
         }
 
-        /// <summary>
-        /// Displays an error message
-        /// </summary>
-        public void ShowError(string message)
+        /// <summary>Releases the window host and all active notifications.</summary>
+        public void Detach(ItemsControl host)
         {
-            if (_infoBar == null) throw new InvalidOperationException("NotificationService not initialized");
-            
-            _infoBar.Message = message;
-            _infoBar.Severity = InfoBarSeverity.Error;
-            _infoBar.IsOpen = true;
+            if (!ReferenceEquals(Host, host))
+                return;
+
+            _host = null;
+            host.ItemsSource = null;
+            _notifications.Clear();
+            _lastMessage = null;
         }
 
-        /// <summary>
-        /// Displays a success message
-        /// </summary>
-        public void ShowSuccess(string message)
+        /// <summary>Shows a notification and suppresses immediate repeats of the same message.</summary>
+        public void Show(string message, NotificationSeverity severity = NotificationSeverity.Info, TimeSpan? duration = null)
         {
-            if (_infoBar == null) throw new InvalidOperationException("NotificationService not initialized");
-            
-            _infoBar.Message = message;
-            _infoBar.Severity = InfoBarSeverity.Success;
-            _infoBar.IsOpen = true;
+            if (string.IsNullOrWhiteSpace(message) || Host is not { } host)
+                return;
+
+            message = message.Trim();
+            if (message.Length > MaxMessageLength)
+                message = message[..MaxMessageLength] + "…";
+
+            var lifetime = duration ?? (severity == NotificationSeverity.Error ? ErrorDuration : DefaultDuration);
+            if (lifetime <= TimeSpan.Zero)
+                lifetime = DefaultDuration;
+
+            host.DispatcherQueue.TryEnqueue(() =>
+            {
+                if (!ReferenceEquals(Host, host))
+                    return;
+
+                var now = DateTimeOffset.UtcNow;
+                if (message == _lastMessage && severity == _lastSeverity && now - _lastShownAt < DuplicateInterval)
+                    return;
+
+                _lastMessage = message;
+                _lastSeverity = severity;
+                _lastShownAt = now;
+
+                if (_notifications.Count == MaxConcurrent)
+                    _notifications.RemoveAt(0);
+
+                _notifications.Add(new NotificationItem(message, severity, lifetime));
+            });
         }
 
-        /// <summary>
-        /// Displays a warning message
-        /// </summary>
-        public void ShowWarning(string message)
-        {
-            if (_infoBar == null) throw new InvalidOperationException("NotificationService not initialized");
-            
-            _infoBar.Message = message;
-            _infoBar.Severity = InfoBarSeverity.Warning;
-            _infoBar.IsOpen = true;
-        }
+        public void ShowSuccess(string message, TimeSpan? duration = null) => Show(message, NotificationSeverity.Success, duration);
+        public void ShowWarning(string message, TimeSpan? duration = null) => Show(message, NotificationSeverity.Warning, duration);
+        public void ShowError(string message, TimeSpan? duration = null) => Show(message, NotificationSeverity.Error, duration);
+        public void ShowInfo(string message, TimeSpan? duration = null) => Show(message, NotificationSeverity.Info, duration);
 
-        /// <summary>
-        /// Displays an information message
-        /// </summary>
-        public void ShowInformation(string message)
-        {
-            if (_infoBar == null) throw new InvalidOperationException("NotificationService not initialized");
-            
-            _infoBar.Message = message;
-            _infoBar.Severity = InfoBarSeverity.Informational;
-            _infoBar.IsOpen = true;
-        }
+        internal void Remove(NotificationItem item) => _notifications.Remove(item);
+    }
 
-        /// <summary>
-        /// Clears and hides the notification
-        /// </summary>
-        public void Clear()
-        {
-            if (_infoBar == null) throw new InvalidOperationException("NotificationService not initialized");
-            
-            _infoBar.IsOpen = false;
-            _infoBar.Message = string.Empty;
-        }
+    /// <summary>Contains the text, severity, and display duration of a notification.</summary>
+    public sealed class NotificationItem(string message, NotificationSeverity severity, TimeSpan duration)
+    {
+        public string Message { get; } = message;
+        public NotificationSeverity Severity { get; } = severity;
+        public TimeSpan Duration { get; } = duration;
     }
 }

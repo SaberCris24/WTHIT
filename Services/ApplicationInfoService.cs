@@ -1,51 +1,65 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using Microsoft.Win32;
 using System.Linq;
-using System.Collections.Concurrent;
+using Microsoft.Win32;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
-    internal class LRUCache<TKey, TValue> where TKey : notnull
+    internal sealed class SimpleCache<TKey, TValue> : IDisposable where TKey : notnull
     {
         private readonly int _capacity;
-        private readonly Dictionary<TKey, LinkedListNode<CacheItem>> _cache;
-        private readonly LinkedList<CacheItem> _lruList;
-        private readonly object _lockObject = new();
+        private readonly ConcurrentDictionary<TKey, LinkedListNode<CacheEntry>> _cache;
+        private readonly LinkedList<CacheEntry> _lruList;
+        private readonly object _lock = new();
+        private readonly TimeSpan _expiration;
+        private volatile bool _disposed;
 
-        public LRUCache(int capacity)
+        public SimpleCache(int capacity, TimeSpan? expiration = null, IEqualityComparer<TKey>? comparer = null)
         {
             _capacity = capacity;
-            _cache = new Dictionary<TKey, LinkedListNode<CacheItem>>(capacity);
-            _lruList = new LinkedList<CacheItem>();
+            _expiration = expiration ?? TimeSpan.FromMinutes(10);
+            _cache = new ConcurrentDictionary<TKey, LinkedListNode<CacheEntry>>(comparer ?? EqualityComparer<TKey>.Default);
+            _lruList = new LinkedList<CacheEntry>();
         }
 
         public bool TryGet(TKey key, out TValue value)
         {
-            lock (_lockObject)
+            value = default!;
+            if (_disposed) return false;
+
+            lock (_lock)
             {
                 if (_cache.TryGetValue(key, out var node))
                 {
+                    if (node.Value.IsExpired)
+                    {
+                        _lruList.Remove(node);
+                        _cache.TryRemove(key, out _);
+                        return false;
+                    }
+
                     _lruList.Remove(node);
                     _lruList.AddFirst(node);
                     value = node.Value.Value;
                     return true;
                 }
-                value = default!;
-                return false;
             }
+            return false;
         }
 
         public void Set(TKey key, TValue value)
         {
-            lock (_lockObject)
+            if (_disposed) return;
+
+            lock (_lock)
             {
                 if (_cache.TryGetValue(key, out var node))
                 {
-                    node.Value.Value = value;
                     _lruList.Remove(node);
+                    node.Value.Refresh(value, _expiration);
                     _lruList.AddFirst(node);
                 }
                 else
@@ -55,117 +69,111 @@ namespace Plantilla.Services
                         var last = _lruList.Last;
                         if (last != null)
                         {
-                            _cache.Remove(last.Value.Key);
+                            _cache.TryRemove(last.Value.Key, out _);
                             _lruList.RemoveLast();
                         }
                     }
 
-                    var newNode = _lruList.AddFirst(new CacheItem(key, value));
-                    _cache.Add(key, newNode);
+                    var newNode = _lruList.AddFirst(new CacheEntry(key, value, _expiration));
+                    _cache[key] = newNode;
                 }
             }
         }
 
-        public int Count => _cache.Count;
-
         public void Clear()
         {
-            lock (_lockObject)
-            {
-                _cache.Clear();
-                _lruList.Clear();
-            }
+            if (_disposed) return;
+            lock (_lock) { _cache.Clear(); _lruList.Clear(); }
         }
 
-        private class CacheItem
+        public int Count => _disposed ? 0 : _cache.Count;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            Clear();
+            _disposed = true;
+        }
+
+        private sealed class CacheEntry
         {
             public TKey Key { get; }
-            public TValue Value { get; set; }
-            public CacheItem(TKey key, TValue value) => (Key, Value) = (key, value);
+            public TValue Value { get; private set; }
+            public DateTime ExpiresAt { get; private set; }
+            public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
+
+            public CacheEntry(TKey key, TValue value, TimeSpan expiration)
+            {
+                Key = key;
+                Value = value;
+                Refresh(value, expiration);
+            }
+
+            public void Refresh(TValue value, TimeSpan expiration)
+            {
+                Value = value;
+                ExpiresAt = DateTime.UtcNow + expiration;
+            }
         }
     }
 
-    public interface IApplicationInfoService
+    public sealed class ApplicationInfoService : IDisposable
     {
-        string GetApplicationInfo(Process process);
-        Dictionary<string, string> GetApplicationInfoBatch(IEnumerable<Process> processes);
-        void ClearCache();
-    }
+        private static readonly Lazy<ApplicationInfoService> _instance = new(() => new ApplicationInfoService());
+        public static ApplicationInfoService Shared => _instance.Value;
 
-    public class ApplicationInfoService : IApplicationInfoService
-    {
-        private readonly LRUCache<string, string> _processCache = new(500);
-        private readonly LRUCache<string, string> _registryCache = new(200);
-        private readonly LRUCache<string, string> _storeAppCache = new(100);
-        
-        private readonly HashSet<string> _systemProcesses = new(StringComparer.OrdinalIgnoreCase)
+        private readonly SimpleCache<string, string> _processCache = new(300, TimeSpan.FromMinutes(5), StringComparer.OrdinalIgnoreCase);
+        private readonly SimpleCache<string, string> _registryCache = new(150, TimeSpan.FromMinutes(30), StringComparer.OrdinalIgnoreCase);
+        private readonly SimpleCache<string, string> _storeAppCache = new(75, TimeSpan.FromMinutes(60), StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, string> _systemProcessCache;
+
+        private static readonly HashSet<string> SystemProcesses = new(StringComparer.OrdinalIgnoreCase)
         {
             "svchost", "csrss", "smss", "wininit", "services", "lsass", "winlogon", "system",
-            "dwm", "explorer", "taskhost", "audiodg", "spoolsv", "conhost", "dllhost"
+            "dwm", "explorer", "taskhost", "audiodg", "spoolsv", "conhost", "dllhost",
+            "runtimebroker", "shellexperiencehost", "searchapp", "startmenuexperiencehost",
+            "textinputhost", "sihost", "taskhostw", "fontdrvhost", "wudfhost", "sppsvc"
         };
+
+        private ApplicationInfoService()
+        {
+            _systemProcessCache = new ConcurrentDictionary<string, string>(
+                SystemProcesses.ToDictionary(p => p, p => $"Windows {p}", StringComparer.OrdinalIgnoreCase)
+            );
+        }
 
         public string GetApplicationInfo(Process process)
         {
             if (process == null) return "Unknown";
 
-            try
-            {
-                if (_processCache.TryGet(process.ProcessName, out var cachedInfo))
-                {
-                    return cachedInfo;
-                }
+            if (_systemProcessCache.TryGetValue(process.ProcessName, out var sysInfo))
+                return sysInfo;
 
-                string appInfo = GetApplicationInfoInternal(process);
-                _processCache.Set(process.ProcessName, appInfo);
-                return appInfo;
-            }
-            catch (Exception)
-            {
-                return "Unknown";
-            }
+            if (_processCache.TryGet(process.ProcessName, out var cachedInfo))
+                return cachedInfo;
+
+            var appInfo = GetApplicationInfoInternal(process);
+            _processCache.Set(process.ProcessName, appInfo);
+            return appInfo;
         }
 
         public Dictionary<string, string> GetApplicationInfoBatch(IEnumerable<Process> processes)
         {
-            var result = new Dictionary<string, string>();
-            var uncachedProcesses = new List<Process>();
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var process in processes)
             {
-                if (_processCache.TryGet(process.ProcessName, out var cachedInfo))
+                if (_systemProcessCache.TryGetValue(process.ProcessName, out var sysInfo))
+                    result[process.ProcessName] = sysInfo;
+                else if (!_processCache.TryGet(process.ProcessName, out var cached))
                 {
-                    result[process.ProcessName] = cachedInfo;
+                    var info = GetApplicationInfoInternal(process);
+                    result[process.ProcessName] = info;
+                    _processCache.Set(process.ProcessName, info);
                 }
                 else
                 {
-                    uncachedProcesses.Add(process);
-                }
-            }
-
-            if (uncachedProcesses.Count > 0)
-            {
-                var parallelQuery = uncachedProcesses.AsParallel()
-                    .WithDegreeOfParallelism(Environment.ProcessorCount);
-
-                var newResults = new ConcurrentDictionary<string, string>();
-
-                parallelQuery.ForAll(process =>
-                {
-                    try
-                    {
-                        var info = GetApplicationInfoInternal(process);
-                        newResults.TryAdd(process.ProcessName, info);
-                        _processCache.Set(process.ProcessName, info);
-                    }
-                    catch
-                    {
-                        newResults.TryAdd(process.ProcessName, "Unknown");
-                    }
-                });
-
-                foreach (var kvp in newResults)
-                {
-                    result[kvp.Key] = kvp.Value;
+                    result[process.ProcessName] = cached;
                 }
             }
 
@@ -174,33 +182,20 @@ namespace Plantilla.Services
 
         private string GetApplicationInfoInternal(Process process)
         {
-            if (_systemProcesses.Contains(process.ProcessName))
-            {
-                return $"Windows {process.ProcessName}";
-            }
-
             string appInfo = "Unknown";
 
             try
             {
-                string processPath = process.MainModule?.FileName ?? string.Empty;
+                string? processPath = process.MainModule?.FileName;
                 if (!string.IsNullOrEmpty(processPath))
                 {
-                    if (processPath.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase))
-                    {
-                        appInfo = GetStoreAppName(processPath);
-                    }
-                    else
-                    {
-                        var versionInfo = FileVersionInfo.GetVersionInfo(processPath);
-                        appInfo = GetBestAppName(versionInfo, processPath);
-                    }
+                    appInfo = processPath.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase)
+                        ? GetStoreAppName(processPath)
+                        : GetBestAppName(FileVersionInfo.GetVersionInfo(processPath), processPath);
 
                     var registryInfo = GetRegistryAppInfo(process.ProcessName);
                     if (!string.IsNullOrEmpty(registryInfo))
-                    {
                         appInfo = registryInfo;
-                    }
                 }
             }
             catch
@@ -208,10 +203,11 @@ namespace Plantilla.Services
                 appInfo = GetRegistryAppInfo(process.ProcessName) ?? "System Process";
             }
 
+            _processCache.Set(process.ProcessName, appInfo);
             return appInfo;
         }
 
-        private string GetBestAppName(FileVersionInfo versionInfo, string processPath)
+        private static string GetBestAppName(FileVersionInfo versionInfo, string processPath)
         {
             return new[]
             {
@@ -238,13 +234,11 @@ namespace Plantilla.Services
                     var appPart = pathParts[appIndex + 1];
                     var namePart = appPart.Split('_')[0];
 
-                    using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families\" + namePart))
+                    using var key = Registry.CurrentUser.OpenSubKey($@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families\{namePart}");
+                    if (key?.GetValue("DisplayName") is string displayName)
                     {
-                        if (key?.GetValue("DisplayName") is string displayName)
-                        {
-                            _storeAppCache.Set(cacheKey, displayName);
-                            return displayName;
-                        }
+                        _storeAppCache.Set(cacheKey, displayName);
+                        return displayName;
                     }
 
                     var result = $"Store: {FormatAppName(namePart)}";
@@ -254,9 +248,8 @@ namespace Plantilla.Services
             }
             catch { }
 
-            var fallback = "Windows Store App";
-            _storeAppCache.Set(cacheKey, fallback);
-            return fallback;
+            _storeAppCache.Set(cacheKey, "Windows Store App");
+            return "Windows Store App";
         }
 
         private string? GetRegistryAppInfo(string processName)
@@ -278,8 +271,7 @@ namespace Plantilla.Services
                     using var baseKey = Registry.LocalMachine.OpenSubKey(basePath);
                     if (baseKey == null) continue;
 
-                    var keyNames = baseKey.GetSubKeyNames();
-                    foreach (var keyName in keyNames)
+                    foreach (var keyName in baseKey.GetSubKeyNames())
                     {
                         using var key = baseKey.OpenSubKey(keyName);
                         if (key == null) continue;
@@ -298,7 +290,7 @@ namespace Plantilla.Services
 
                 _registryCache.Set(processName, string.Empty);
             }
-            catch 
+            catch
             {
                 _registryCache.Set(processName, string.Empty);
             }
@@ -306,15 +298,8 @@ namespace Plantilla.Services
             return null;
         }
 
-        private string FormatAppName(string name)
-        {
-            return System.Text.RegularExpressions.Regex.Replace(
-                name,
-                "([A-Z])",
-                " $1",
-                System.Text.RegularExpressions.RegexOptions.Compiled
-            ).Trim();
-        }
+        private static string FormatAppName(string name) =>
+            System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
 
         public void ClearCache()
         {
@@ -323,9 +308,15 @@ namespace Plantilla.Services
             _storeAppCache.Clear();
         }
 
-        public (int ProcessCache, int RegistryCache, int StoreAppCache) GetCacheStats()
+        public (int ProcessCache, int RegistryCache, int StoreAppCache) GetCacheStats() =>
+            (_processCache.Count, _registryCache.Count, _storeAppCache.Count);
+
+        public void Dispose()
         {
-            return (_processCache.Count, _registryCache.Count, _storeAppCache.Count);
+            _processCache.Dispose();
+            _registryCache.Dispose();
+            _storeAppCache.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

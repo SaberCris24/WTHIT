@@ -1,242 +1,434 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Plantilla.Services;
+using Microsoft.Win32;
+using WTHIT.Core;
+using WTHIT.Models;
+using WTHIT.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace Plantilla.Pages.Home
+namespace WTHIT.Pages.Home
 {
+    /// <summary>
+    /// Home dashboard page displaying system overview, uptime, and top processes.
+    /// Optimized for lower memory usage, safer timers, and cleaner disposal.
+    /// </summary>
     public sealed partial class HomePage : Page, IDisposable
     {
-        private readonly ISystemInfoService _systemInfoService;
-        
-        /// <summary>
-        /// Fast timer for uptime (stopwatch)
-        /// </summary>
+        private readonly SystemInfoService _systemInfoService = SystemInfoService.Shared;
+        private const int TopProcessCount = 5;
+        private readonly ProcessManagementService _processManagementService;
+        private readonly DatabaseService _databaseService;
+        private readonly ProcessDetailsDialogService _processDetailsDialogService;
+
         private readonly DispatcherTimer _uptimeTimer;
-        
-        /// <summary>
-        /// Slow timer for processes
-        /// </summary>
         private readonly DispatcherTimer _refreshTimer;
-        
-        private readonly IVirusScanService _virusScanService;
-        private readonly IProcessManagementService _processManagementService;
-        private readonly INotificationService _notificationService;
 
-        private ObservableCollection<TopProcessItem> TopProcesses { get; set; }
-        public ObservableCollection<ScanResultItem> ScanResults => ScanResultsManager.ScanResults;
+        private bool _disposed;
+        private int _isDashboardLoading;
 
-        private bool _isCpuSortAscending = false;
-        private bool _isRamSortAscending = false;
+        /// <summary>
+        /// Collection of top processes displayed in the dashboard.
+        /// </summary>
+        public ObservableCollection<TopProcessItem> TopProcesses { get; } = new();
 
+        /// <summary>
+        /// Page constructor. Initializes services, timers, and event handlers.
+        /// </summary>
         public HomePage()
         {
-            this.InitializeComponent();
-            
-            _systemInfoService = new SystemInfoService();
-            _virusScanService = new VirusScanService("1234");
-            _processManagementService = new ProcessManagementService(new ApplicationInfoService());
-            _notificationService = new NotificationService();
-            
-            TopProcesses = new ObservableCollection<TopProcessItem>();
-            
+            InitializeComponent();
+            NavigationCacheMode = NavigationCacheMode.Disabled;
+
+            _processManagementService = new ProcessManagementService(ApplicationInfoService.Shared);
+            _databaseService = DatabaseService.Instance;
+            _processDetailsDialogService = new ProcessDetailsDialogService(_databaseService);
+
             TopProcessesListView.ItemsSource = TopProcesses;
-            TopProcessesListViewNarrow.ItemsSource = TopProcesses;
 
-            ScanResultsListView.ItemsSource = ScanResults;
-            ScanResultsListViewNarrow.ItemsSource = ScanResults;
-            
-            _notificationService.Initialize(StatusInfoBar);
-            
-            /// <summary>
-            /// Initialize the stopwatch for real uptime
-            /// </summary>
+            // Initialize uptime timer (1 second interval)
             _uptimeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _uptimeTimer.Tick += UptimeTimer_Tick;
+            _uptimeTimer.Tick += OnUptimeTimerTick;
+
+            // Initialize refresh timer (5 seconds interval)
+            _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Configuration.DefaultRefreshIntervalSeconds) };
+            _refreshTimer.Tick += OnRefreshTimerTick;
+
+            Unloaded += OnPageUnloaded;
+            Loaded += OnPageLoaded;
+            TopProcesses.CollectionChanged += TopProcesses_CollectionChanged;
+        }
+
+        /// <summary>
+        /// Starts the dashboard updates when the page is loaded.
+        /// </summary>
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        {
+            OnUptimeTimerTick(null, e);
             _uptimeTimer.Start();
-
-            // Load initial process data
-            _ = LoadDashboardDataAsync();
-            
-            // Configure the slow timer for processes
-            _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-            _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
-
-            UpdateCleanAllButtonVisibility();
+            _ = LoadDashboardDataAsync();
+            _ = LoadWindowsVersionAsync();
         }
 
         /// <summary>
-        /// Handler for the fast timer (stopwatch with real uptime)
+        /// Loads Windows version asynchronously to avoid blocking the UI thread.
         /// </summary>
-        private void UptimeTimer_Tick(object? sender, object e)
-        {
-            // Gets the real system uptime and formats it
-            var uptimeMilliseconds = Environment.TickCount64;
-            var ts = TimeSpan.FromMilliseconds(uptimeMilliseconds);
-            UptimeText.Text = FormatUptime(ts);
-        }
-
-        /// <summary>
-        /// Handler for the slow timer (processes)
-        /// </summary>
-        private async void RefreshTimer_Tick(object? sender, object e)
-        {
-            await LoadDashboardDataAsync();
-        }
-
-        private async Task LoadDashboardDataAsync()
+        private async Task LoadWindowsVersionAsync()
         {
             try
             {
-                // Load the top 5 processes
-                var topProcesses = await _systemInfoService.GetTopProcessesByResourceAsync(5);
-                
-                TopProcesses.Clear();
-                foreach (var process in topProcesses)
-                {
-                    TopProcesses.Add(process);
-                }
+                var windowsVersion = await Task.Run(GetWindowsVersionInfo);
 
-                // Load system information (only the number of processes)
-                var systemInfo = await _systemInfoService.GetSystemInfoAsync();
-                TotalProcessesText.Text = systemInfo.TotalProcesses.ToString();
-                
-                /// <summary>
-                /// Uptime is no longer updated here, the stopwatch does it
-                /// </summary>
+                if (!_disposed)
+                    WindowsVersionText.Text = windowsVersion;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading dashboard data: {ex.Message}");
+                Debug.WriteLine($"Error loading Windows version: {ex.Message}");
+
+                if (!_disposed)
+                    WindowsVersionText.Text = "Unknown";
             }
         }
 
         /// <summary>
-        /// Method to format the real uptime
+        /// Reads Windows version information from the registry.
+        /// Handles the Windows 10/11 build number distinction correctly.
         /// </summary>
-        private string FormatUptime(TimeSpan ts)
+        private string GetWindowsVersionInfo()
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key != null)
+                {
+                    var productName = key.GetValue("ProductName")?.ToString() ?? "Windows";
+                    var displayVersion = key.GetValue("DisplayVersion")?.ToString();
+                    var currentBuildStr = key.GetValue("CurrentBuild")?.ToString();
+                    var releaseId = key.GetValue("ReleaseId")?.ToString();
+
+                    // ProductName incorrectly reports "Windows 10" on Windows 11 machines.
+                    // We reliably distinguish them using CurrentBuild (Windows 11 starts at build 22000).
+                    bool isWindows11 = int.TryParse(currentBuildStr, out int buildNumber) && buildNumber >= 22000;
+                    string windowsName = isWindows11 ? "Windows 11" : "Windows 10";
+
+                    if (!string.IsNullOrWhiteSpace(displayVersion))
+                        return $"{windowsName}\n{displayVersion}";
+
+                    if (!string.IsNullOrWhiteSpace(releaseId))
+                        return $"{windowsName}\n{releaseId}";
+
+                    if (!string.IsNullOrWhiteSpace(currentBuildStr))
+                        return $"{windowsName}\nBuild {currentBuildStr}";
+
+                    return windowsName;
+                }
+
+                var osVersion = Environment.OSVersion;
+                return $"Windows {osVersion.Version.Major}.{osVersion.Version.Minor}";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error reading Windows version from registry: {ex.Message}");
+                return Environment.OSVersion.VersionString;
+            }
+        }
+
+        /// <summary>
+        /// Loads icons for newly added top processes.
+        /// </summary>
+        private void TopProcesses_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (_disposed) return;
+
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+            {
+                foreach (TopProcessItem item in e.NewItems)
+                    _ = item.LoadIconAsync();
+            }
+        }
+
+        /// <summary>
+        /// Stops timers when the page is unloaded to save CPU cycles.
+        /// </summary>
+        private void OnPageUnloaded(object sender, RoutedEventArgs e)
+        {
+            _uptimeTimer.Stop();
+            _refreshTimer.Stop();
+        }
+
+        /// <summary>
+        /// Updates uptime text every second.
+        /// </summary>
+        private void OnUptimeTimerTick(object? sender, object e)
+        {
+            if (_disposed) return;
+
+            var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+            UptimeText.Text = FormatUptime(uptime);
+        }
+
+        /// <summary>
+        /// Refreshes dashboard data every few seconds.
+        /// </summary>
+        private async void OnRefreshTimerTick(object? sender, object e)
+        {
+            if (_disposed) return;
+
+            try
+            {
+                await LoadDashboardDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in refresh timer: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads top processes and system information.
+        /// Uses a concurrency flag to prevent overlapping refreshes.
+        /// </summary>
+        private async Task LoadDashboardDataAsync()
+        {
+            if (_disposed) return;
+
+            if (Interlocked.Exchange(ref _isDashboardLoading, 1) == 1)
+                return;
+
+            try
+            {
+                var snapshot = await _systemInfoService.GetDashboardSnapshotAsync(TopProcessCount);
+                if (_disposed) return;
+
+                UpdateTopProcesses(snapshot.TopProcesses);
+                TotalProcessesText.Text = snapshot.TotalProcesses.ToString();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading dashboard data: {ex.Message}");
+            }
+            finally
+            {
+                Volatile.Write(ref _isDashboardLoading, 0);
+            }
+        }
+
+        /// <summary>Updates the ranking while retaining the rows and icons of processes still listed.</summary>
+        private void UpdateTopProcesses(IReadOnlyList<SystemInfoService.ProcessUsage> rankedProcesses)
+        {
+            for (int index = TopProcesses.Count - 1; index >= 0; index--)
+            {
+                var item = TopProcesses[index];
+                if (rankedProcesses.Any(sample => MatchesProcess(item, sample)))
+                    continue;
+
+                TopProcesses.RemoveAt(index);
+                item.Dispose();
+            }
+
+            for (int index = 0; index < rankedProcesses.Count; index++)
+            {
+                var sample = rankedProcesses[index];
+                int currentIndex = index;
+                while (currentIndex < TopProcesses.Count && !MatchesProcess(TopProcesses[currentIndex], sample))
+                    currentIndex++;
+
+                if (currentIndex == TopProcesses.Count)
+                {
+                    var item = new TopProcessItem { ProcessId = sample.Id, ProcessName = sample.Name };
+                    item.UpdateUsage(sample);
+                    TopProcesses.Insert(index, item);
+                    continue;
+                }
+
+                TopProcesses[currentIndex].UpdateUsage(sample);
+                if (currentIndex != index)
+                    TopProcesses.Move(currentIndex, index);
+            }
+        }
+
+        private static bool MatchesProcess(TopProcessItem item, SystemInfoService.ProcessUsage sample) =>
+            item.ProcessId == sample.Id && string.Equals(item.ProcessName, sample.Name, StringComparison.Ordinal);
+
+        /// <summary>
+        /// Formats uptime into a friendly string.
+        /// </summary>
+        private static string FormatUptime(TimeSpan ts)
         {
             if (ts.TotalDays >= 1)
-            {
                 return $"{(int)ts.TotalDays}d {ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
-            }
-            else if (ts.TotalHours >= 1)
-            {
+
+            if (ts.TotalHours >= 1)
                 return $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
-            }
-            else
-            {
-                return $"{ts.Minutes}m {ts.Seconds}s";
-            }
+
+            return $"{ts.Minutes}m {ts.Seconds}s";
         }
 
+        /// <summary>
+        /// Manual refresh button click handler.
+        /// </summary>
         private async void RefreshTopProcessesButton_Click(object sender, RoutedEventArgs e)
         {
-            await LoadDashboardDataAsync();
-        }
+            if (_disposed) return;
 
-        private void SortByCpu_Click(object sender, RoutedEventArgs e)
-        {
-            _isCpuSortAscending = !_isCpuSortAscending;
-            var sortedList = _isCpuSortAscending 
-                ? TopProcesses.OrderBy(p => p.CpuUsageValue).ToList()
-                : TopProcesses.OrderByDescending(p => p.CpuUsageValue).ToList();
-
-            TopProcesses.Clear();
-            foreach (var item in sortedList)
+            try
             {
-                TopProcesses.Add(item);
+                await LoadDashboardDataAsync();
+                NotificationService.Instance.ShowSuccess("Dashboard refreshed");
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Instance.ShowError($"Refresh failed: {ex.Message}");
             }
         }
 
-        private void SortByRam_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Opens details for a top process.
+        /// </summary>
+        private async void ViewDetailsTopProcessButton_Click(object sender, RoutedEventArgs e)
         {
-            _isRamSortAscending = !_isRamSortAscending;
-            var sortedList = _isRamSortAscending 
-                ? TopProcesses.OrderBy(p => p.MemoryUsageValue).ToList()
-                : TopProcesses.OrderByDescending(p => p.MemoryUsageValue).ToList();
+            if (_disposed || _processDetailsDialogService == null) return;
 
-            TopProcesses.Clear();
-            foreach (var item in sortedList)
+            if (sender is Button button && button.DataContext is TopProcessItem topProcess)
             {
-                TopProcesses.Add(item);
-            }
-        }
-
-        private async void ScanTopProcessButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button button && button.DataContext is TopProcessItem process)
-            {
-                var scanResult = new ScanResultItem { ProcessName = process.ProcessName, ScanResult = "Scanning..." };
-                ScanResultsManager.AddScanResult(scanResult);
-                UpdateCleanAllButtonVisibility();
-
                 try
                 {
-                    var runningProcess = _processManagementService.GetProcessById(process.ProcessId);
-                    if (runningProcess != null)
+                    using var processItem = new ProcessItem
                     {
-                        var path = _processManagementService.GetProcessPath(runningProcess);
-                        if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                        {
-                            scanResult.ScanResult = await _virusScanService.GetVirusTotalReportAsync(path);
-                        }
-                        else
-                        {
-                            scanResult.ScanResult = "No file path";
-                        }
-                    }
-                    else
+                        ProcessId = topProcess.ProcessId,
+                        ProcessName = topProcess.ProcessName,
+                        ProcessIcon = topProcess.ProcessIcon
+                    };
+
+                    if (processItem.ProcessIcon == null)
                     {
-                        scanResult.ScanResult = "Process not found";
+                        await processItem.LoadIconAsync();
                     }
+
+                    await _processDetailsDialogService.ShowAsync(
+                        processItem,
+                        button.XamlRoot,
+                        onScanRequested: ScanProcessFromDialogAsync);
                 }
                 catch (Exception ex)
                 {
-                    scanResult.ScanResult = $"Error: {ex.Message}";
+                    NotificationService.Instance.ShowError($"Unable to open process details: {ex.Message}");
+                    Debug.WriteLine(ex);
                 }
-
-                _notificationService.ShowSuccess($"Scanned {process.ProcessName}.");
             }
         }
 
-        private void CleanScanResult_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Scans a process from the details dialog.
+        /// </summary>
+        private async Task ScanProcessFromDialogAsync(ProcessItem process, CancellationToken cancellationToken)
         {
-            if (sender is Button button && button.DataContext is ScanResultItem result)
+            var virusScanService = VirusScanService.Shared;
+
+            if (!virusScanService.IsConfigured)
             {
-                ScanResults.Remove(result);
-                UpdateCleanAllButtonVisibility();
+                NotificationService.Instance.ShowWarning("VirusTotal API key not configured.");
+                throw new InvalidOperationException("VirusTotal API key not configured.");
             }
+
+            process.VirusStatus = "Scanning...";
+            var filePath = process.FilePath;
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                using var runningProcess = _processManagementService.GetProcessById(process.ProcessId);
+                if (runningProcess != null)
+                {
+                    filePath = _processManagementService.GetProcessPath(runningProcess);
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                process.VirusStatus = "The executable path is unavailable.";
+                NotificationService.Instance.ShowWarning(process.VirusStatus);
+                return;
+            }
+
+            var vtResult = await virusScanService.ScanFileAsync(filePath, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!vtResult.HasReport)
+            {
+                process.VirusStatus = vtResult.Summary;
+                NotificationService.Instance.ShowWarning(vtResult.Summary);
+                return;
+            }
+
+            process.VirusStatus = "Scanned";
+            process.FilePath = filePath;
+            process.ScanDetails = vtResult;
+            process.IsScanned = true;
+
+            await ScanHistoryService.Shared.SaveAsync(filePath, vtResult);
+            if (!_disposed && !cancellationToken.IsCancellationRequested)
+                NotificationService.Instance.ShowSuccess($"Scanned {process.ProcessName}.");
         }
 
-        private void CleanAllScanResults_Click(object sender, RoutedEventArgs e)
-        {
-            ScanResults.Clear();
-            UpdateCleanAllButtonVisibility();
-        }
-
-        private void UpdateCleanAllButtonVisibility()
-        {
-            var isVisible = ScanResults.Count > 1;
-            CleanAllButton.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
-            CleanAllButtonNarrow.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
-        }
-
+        /// <summary>
+        /// Releases all page resources and detaches event handlers.
+        /// </summary>
         public void Dispose()
         {
-            _refreshTimer?.Stop();
-            _uptimeTimer?.Stop();
+            if (_disposed) return;
+            _disposed = true;
+
+            Unloaded -= OnPageUnloaded;
+            Loaded -= OnPageLoaded;
+            TopProcesses.CollectionChanged -= TopProcesses_CollectionChanged;
+
+            _refreshTimer.Stop();
+            _refreshTimer.Tick -= OnRefreshTimerTick;
+
+            _uptimeTimer.Stop();
+            _uptimeTimer.Tick -= OnUptimeTimerTick;
+
+            var oldItems = TopProcesses.ToList();
+            TopProcesses.Clear();
+
+            foreach (var old in oldItems)
+            {
+                try
+                {
+                    old.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error disposing TopProcessItem: {ex.Message}");
+                }
+            }
+
+            if (TopProcessesListView != null)
+                TopProcessesListView.ItemsSource = null;
+
+            _processManagementService?.Dispose();
+            _processDetailsDialogService?.Dispose();
+
+            DataContext = null;
+
+            GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Disposes the page when navigating away.
+        /// </summary>
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
@@ -244,69 +436,106 @@ namespace Plantilla.Pages.Home
         }
     }
 
-    public class ObservableObject : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        protected bool SetProperty<T>(ref T backingStore, T value, [CallerMemberName] string? propertyName = "")
-        {
-            if (EqualityComparer<T>.Default.Equals(backingStore, value)) return false;
-            backingStore = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
-    }
-
-    public class TopProcessItem : ObservableObject
+    /// <summary>
+    /// Model for top process items shown on the dashboard.
+    /// </summary>
+    public class TopProcessItem : INotifyPropertyChanged, IDisposable
     {
         private int _processId;
         private string _processName = string.Empty;
         private double _cpuUsageValue;
-        private string _cpuUsage = string.Empty;
         private long _memoryUsageValue;
+        private string _cpuUsage = string.Empty;
         private string _memoryUsage = string.Empty;
+        private Microsoft.UI.Xaml.Media.Imaging.BitmapImage? _processIcon;
+        private bool _disposed;
 
-        public int ProcessId { get => _processId; set => SetProperty(ref _processId, value); }
-        public string ProcessName { get => _processName; set => SetProperty(ref _processName, value); }
-        public double CpuUsageValue { get => _cpuUsageValue; set => SetProperty(ref _cpuUsageValue, value); }
-        public long MemoryUsageValue { get => _memoryUsageValue; set => SetProperty(ref _memoryUsageValue, value); }
-        public string CpuUsage { get => _cpuUsage; set => SetProperty(ref _cpuUsage, value); }
-        public string MemoryUsage { get => _memoryUsage; set => SetProperty(ref _memoryUsage, value); }
-    }
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-    public class ScanResultItem : ObservableObject
-    {
-        private string _scanResult = string.Empty;
-        public string ProcessName { get; set; } = string.Empty;
-
-        public string ScanResult
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
-            get => _scanResult;
-            set => SetProperty(ref _scanResult, value);
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return true;
         }
-    }
 
-    public static class ScanResultsManager
-    {
-        public static ObservableCollection<ScanResultItem> ScanResults { get; } = new ObservableCollection<ScanResultItem>();
-        private const int MaxScanCount = 10;
-
-        public static void AddScanResult(ScanResultItem result)
+        public int ProcessId
         {
-            ScanResults.Insert(0, result);
-            while (ScanResults.Count > MaxScanCount)
-            {
-                ScanResults.RemoveAt(ScanResults.Count - 1);
-            }
+            get => _processId;
+            set => SetProperty(ref _processId, value);
         }
-    }
 
-    public class SystemInfoItem
-    {
-        public int TotalProcesses { get; set; }
+        public string ProcessName
+        {
+            get => _processName;
+            set => SetProperty(ref _processName, value);
+        }
+
+        public double CpuUsageValue
+        {
+            get => _cpuUsageValue;
+            set => SetProperty(ref _cpuUsageValue, value);
+        }
+
+        public long MemoryUsageValue
+        {
+            get => _memoryUsageValue;
+            set => SetProperty(ref _memoryUsageValue, value);
+        }
+
+        public string CpuUsage
+        {
+            get => _cpuUsage;
+            set => SetProperty(ref _cpuUsage, value);
+        }
+
+        public string MemoryUsage
+        {
+            get => _memoryUsage;
+            set => SetProperty(ref _memoryUsage, value);
+        }
+
+        public Microsoft.UI.Xaml.Media.Imaging.BitmapImage? ProcessIcon
+        {
+            get => _processIcon;
+            set => SetProperty(ref _processIcon, value);
+        }
+
+        /// <summary>Applies a new sample and notifies bindings when displayed values change.</summary>
+        public void UpdateUsage(SystemInfoService.ProcessUsage sample)
+        {
+            CpuUsageValue = sample.Cpu;
+            CpuUsage = $"{sample.Cpu:F1}%";
+            MemoryUsageValue = sample.Memory;
+            MemoryUsage = sample.FormattedMemory;
+        }
+
         /// <summary>
-        /// The Uptime property is no longer needed here
+        /// Loads the process icon if it has not been loaded yet.
         /// </summary>
+        public async Task LoadIconAsync()
+        {
+            if (_disposed || ProcessIcon != null) return;
+
+            var icon = await ProcessIconService.GetIconForProcessAsync(_processId);
+            if (!_disposed)
+                ProcessIcon = icon;
+        }
+
+        /// <summary>
+        /// Releases item resources.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _processIcon = null;
+            _disposed = true;
+
+            GC.SuppressFinalize(this);
+        }
     }
+
 }

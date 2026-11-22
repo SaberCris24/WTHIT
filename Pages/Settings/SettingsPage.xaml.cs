@@ -1,157 +1,251 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Plantilla.Helpers;
+using WTHIT.Core;
+using WTHIT.Services;
 using System;
 
-namespace Plantilla.Pages.Settings
+namespace WTHIT.Pages.Settings
 {
     /// <summary>
-    /// Settings page that handles application appearance and behavior configuration
-    /// Provides options for theme selection, backdrop effects, and navigation style
+    /// Settings page for configuring application preferences.
+    /// Manages theme, backdrop, navigation, API keys, and cache settings.
     /// </summary>
-    public sealed partial class SettingsPage : Page
+    public sealed partial class SettingsPage : Page, IDisposable
     {
+        private bool _disposed;
+        private bool _initializing = true;
+
         /// <summary>
-        /// Initializes the settings page and sets up required event handlers
+        /// Page constructor. Initializes UI components and event handlers.
         /// </summary>
         public SettingsPage()
         {
-            this.InitializeComponent();
-            this.NavigationCacheMode = NavigationCacheMode.Required;
-            
-            // Subscribe to the Loaded event for proper initialization timing
-            this.Loaded += SettingsPage_Loaded;
+            InitializeComponent();
+            NavigationCacheMode = NavigationCacheMode.Disabled;
+            Loaded += OnPageLoaded;
         }
 
         /// <summary>
-        /// Handles the page's Loaded event
-        /// Ensures settings are initialized after the page is fully loaded
+        /// Event handler triggered when the page is loaded into the visual tree.
+        /// Loads the saved settings into the page controls.
         /// </summary>
-        private void SettingsPage_Loaded(object sender, RoutedEventArgs e)
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
         {
+            
             InitializeSettings();
+            UpdateCacheSizeDisplay();
+            _initializing = false;
         }
 
         /// <summary>
-        /// Initializes all settings controls with their current values
-        /// Sets up theme, backdrop, and navigation preferences
+        /// Initializes UI controls with current settings values.
         /// </summary>
         private void InitializeSettings()
         {
+            txtVirusTotalApiKey.Password = Configuration.VirusTotalApiKey;
+            cmbTheme.SelectedIndex = App.CurrentTheme switch
+            {
+                ElementTheme.Light => 1,
+                ElementTheme.Dark => 2,
+                _ => 0
+            };
+            cmbBackdrop.SelectedIndex = App.CurrentBackdrop switch
+            {
+                BackdropType.MicaAlt => 1,
+                BackdropType.Acrylic => 2,
+                _ => 0
+            };
+            if (App.MainWindow is MainWindow mainWindow)
+            {
+                cmbNavPosition.SelectedIndex = mainWindow.NavigationViewControl.PaneDisplayMode == NavigationViewPaneDisplayMode.Top ? 1 : 0;
+            }
+            numMaxScanResults.Minimum = Configuration.MinScanResults;
+            numMaxScanResults.Maximum = Configuration.MaxScanResultsLimit;
+            numMaxScanResults.Value = Configuration.MaxScanResults;
+        }
+
+        /// <summary>
+        /// Updates the cache size display with current statistics.
+        /// </summary>
+        private void UpdateCacheSizeDisplay()
+        {
             try
             {
-                // Set theme selection based on current theme
-                cmbTheme.SelectedIndex = App.CurrentTheme switch
-                {
-                    ElementTheme.Light => 1,  // Light theme
-                    ElementTheme.Dark => 2,   // Dark theme
-                    _ => 0                    // System default
-                };
-
-                // Set backdrop selection based on current backdrop
-                cmbBackdrop.SelectedIndex = App.CurrentBackdrop switch
-                {
-                    BackdropHelper.BackdropType.MicaAlt => 1,  // Mica Alt
-                    BackdropHelper.BackdropType.Acrylic => 2,  // Acrylic
-                    _ => 0                                      // Default Mica
-                };
-
-                // Set navigation style based on current layout
-                var mainWindow = (MainWindow)App.MainWindow;
-                cmbNavPosition.SelectedIndex = mainWindow.NavigationViewControl.PaneDisplayMode 
-                    == NavigationViewPaneDisplayMode.Top ? 1 : 0;
+                var appInfoService = ApplicationInfoService.Shared;
+                var stats = appInfoService.GetCacheStats();
+                var total = stats.ProcessCache + stats.RegistryCache + stats.StoreAppCache;
+                CacheSizeText.Text = $"Current cache: {total} items (Process: {stats.ProcessCache}, Registry: {stats.RegistryCache}, Store: {stats.StoreAppCache})";
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing settings: {ex.Message}");
+                CacheSizeText.Text = "Current cache: unavailable";
             }
         }
 
         /// <summary>
-        /// Handles theme selection changes
-        /// Updates the application theme when user selects a different option
+        /// SelectionChanged event handler for the theme ComboBox.
         /// </summary>
         private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            try
+            if (_initializing || sender is not ComboBox { SelectedItem: ComboBoxItem selectedItem }) return;
+            var theme = selectedItem.Tag.ToString() switch
             {
-                if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem selectedItem)
-                {
-                    // Convert selection to theme
-                    ElementTheme selectedTheme = selectedItem.Tag.ToString() switch
-                    {
-                        "Light" => ElementTheme.Light,
-                        "Dark" => ElementTheme.Dark,
-                        _ => ElementTheme.Default
-                    };
-
-                    // Apply the selected theme
-                    App.SetTheme(selectedTheme);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error changing theme: {ex.Message}");
-            }
+                "Light" => ElementTheme.Light,
+                "Dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default
+            };
+            App.SetTheme(theme);
         }
 
         /// <summary>
-        /// Handles backdrop selection changes
-        /// Updates the window backdrop when user selects a different effect
+        /// SelectionChanged event handler for the backdrop ComboBox.
         /// </summary>
         private void cmbBackdrop_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_initializing || sender is not ComboBox { SelectedItem: ComboBoxItem selectedItem }) return;
+            var backdrop = selectedItem.Tag.ToString() switch
+            {
+                "MicaAlt" => BackdropType.MicaAlt,
+                "Acrylic" => BackdropType.Acrylic,
+                _ => BackdropType.Mica
+            };
+            App.SetBackdrop(backdrop);
+        }
+
+        /// <summary>
+        /// SelectionChanged event handler for the navigation position ComboBox.
+        /// </summary>
+        private void cmbNavPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_initializing || sender is not ComboBox { SelectedItem: ComboBoxItem selectedItem }) return;
+            if (App.MainWindow is not MainWindow mainWindow) return;
+            var isLeftMode = (string)selectedItem.Tag == "Left";
+            mainWindow.NavigationViewControl.PaneDisplayMode = isLeftMode
+                ? NavigationViewPaneDisplayMode.Auto
+                : NavigationViewPaneDisplayMode.Top;
+            mainWindow.NavigationViewControl.IsPaneOpen = isLeftMode;
+            mainWindow.SaveNavigationViewPosition(isLeftMode);
+        }
+
+        /// <summary>
+        /// Click event handler for the Save API Key button.
+        /// </summary>
+        private void btnSaveApiKey_Click(object sender, RoutedEventArgs e)
+        {
             try
             {
-                if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem selectedItem)
-                {
-                    // Convert selection to backdrop type
-                    var backdropType = selectedItem.Tag.ToString() switch
-                    {
-                        "MicaAlt" => BackdropHelper.BackdropType.MicaAlt,
-                        "Acrylic" => BackdropHelper.BackdropType.Acrylic,
-                        _ => BackdropHelper.BackdropType.Mica
-                    };
+                var apiKey = txtVirusTotalApiKey.Password.Trim();
+                Configuration.VirusTotalApiKey = apiKey;
+                txtVirusTotalApiKey.Password = apiKey;
 
-                    // Apply the selected backdrop
-                    App.SetBackdrop(backdropType);
+                if (apiKey.Length == 0)
+                {
+                    NotificationService.Instance.ShowWarning("API key cleared. VirusTotal scanning will be disabled.");
+                }
+                else
+                {
+                    NotificationService.Instance.ShowSuccess("VirusTotal API key saved successfully.");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error changing backdrop: {ex.Message}");
+                NotificationService.Instance.ShowError($"Error saving API key: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Handles navigation style selection changes
-        /// Updates the navigation pane position when user changes the layout preference
+        /// Click event handler for the Clear Cache button.
         /// </summary>
-        private void cmbNavPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void btnClearCache_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem selectedItem)
-                {
-                    var mainWindow = (MainWindow)App.MainWindow;
-                    var isLeftMode = (string)selectedItem.Tag == "Left";
-
-                    // Update navigation view layout
-                    mainWindow.NavigationViewControl.PaneDisplayMode = isLeftMode
-                        ? NavigationViewPaneDisplayMode.Auto
-                        : NavigationViewPaneDisplayMode.Top;
-
-                    mainWindow.NavigationViewControl.IsPaneOpen = isLeftMode;
-
-                    // Save the navigation preference
-                    mainWindow.SaveNavigationViewPosition(isLeftMode);
-                }
+                ApplicationInfoService.Shared.ClearCache();
+                UpdateCacheSizeDisplay();
+                NotificationService.Instance.ShowSuccess("Cache cleared successfully.");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error changing navigation position: {ex.Message}");
+                NotificationService.Instance.ShowError($"Error clearing cache: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Click event handler for the Clear Scan History button.
+        /// </summary>
+        private async void btnClearScanHistory_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await ScanHistoryService.Shared.ClearAsync();
+                NotificationService.Instance.ShowSuccess("Scan history cleared successfully.");
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Instance.ShowError($"Failed to clear scan history: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Click event handler for the Reset Settings button.
+        /// </summary>
+        private void btnResetSettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                App.SetTheme(ElementTheme.Default);
+                cmbTheme.SelectedIndex = 0;
+                App.SetBackdrop(BackdropType.Mica);
+                cmbBackdrop.SelectedIndex = 0;
+                if (App.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.NavigationViewControl.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
+                    mainWindow.NavigationViewControl.IsPaneOpen = true;
+                    mainWindow.SaveNavigationViewPosition(true);
+                    cmbNavPosition.SelectedIndex = 0;
+                }
+                Configuration.MaxScanResults = Configuration.DefaultMaxScanCount;
+                numMaxScanResults.Value = Configuration.DefaultMaxScanCount;
+                Configuration.VirusTotalApiKey = string.Empty;
+                txtVirusTotalApiKey.Password = string.Empty;
+                ApplicationInfoService.Shared.ClearCache();
+                UpdateCacheSizeDisplay();
+                NotificationService.Instance.ShowSuccess("All settings reset to defaults.");
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Instance.ShowError($"Error resetting settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// ValueChanged event handler for the Max Scan Results NumberBox.
+        /// </summary>
+        private void numMaxScanResults_ValueChanged(object sender, NumberBoxValueChangedEventArgs e)
+        {
+            if (_initializing) return;
+            Configuration.MaxScanResults = (int)numMaxScanResults.Value;
+        }
+
+        /// <summary>
+        /// Releases all page resources and detaches event handlers.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed) return;
+            Loaded -= OnPageLoaded;
+            _disposed = true;
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes the page when navigating away.
+        /// </summary>
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            Dispose();
         }
     }
 }

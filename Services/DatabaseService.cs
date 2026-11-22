@@ -1,54 +1,67 @@
 using SQLite;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
-using Plantilla.Models;
+using WTHIT.Models;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
     /// <summary>
-    /// Manages SQLite database operations for process information
+    /// Reads process descriptions from the SQLite database shipped with the application.
     /// </summary>
-    public class DatabaseService
+    public sealed class DatabaseService : IDisposable, IAsyncDisposable
     {
-        // Database connection instance
-        private static SQLiteAsyncConnection? _database;
-        private static readonly string dbName = "ProcessInfo.db";
+        private static readonly Lazy<DatabaseService> _instance = new(() => new DatabaseService());
+        private const string DbName = "ProcessInfo.db";
 
-        /// <summary>
-        /// Sets up the database connection
-        /// </summary>
+        private SQLiteAsyncConnection? _database;
+        private bool _initialized;
+        private bool _disposed;
+        private readonly SemaphoreSlim _initLock = new(1, 1);
+
+        private DatabaseService() { }
+
+        public static DatabaseService Instance => _instance.Value;
+
         public async Task InitializeAsync()
         {
-            if (_database != null)
-                return;
+            if (_initialized && !_disposed) return;
 
+            await _initLock.WaitAsync();
             try
             {
-                string appDirectory = AppContext.BaseDirectory;
-                string databasePath = Path.Combine(appDirectory, dbName);
+                if (_initialized && !_disposed) return;
+                if (_disposed) return;
 
-                _database = new SQLiteAsyncConnection(databasePath);
-                await _database.CreateTableAsync<ProcessInfo>(); 
+                var databasePath = GetDatabasePath();
+                _database = new SQLiteAsyncConnection(databasePath, SQLiteOpenFlags.ReadOnly | SQLiteOpenFlags.FullMutex);
+                await _database.ExecuteScalarAsync<int>("SELECT 1 FROM ProcessInfo LIMIT 1");
+                _initialized = true;
+
+                System.Diagnostics.Debug.WriteLine($"Database initialized from: {databasePath}");
             }
-            catch (Exception ex)
+            finally
             {
-                System.Diagnostics.Debug.WriteLine($"Database initialization error: {ex.Message}");
-                throw;
+                _initLock.Release();
             }
         }
 
-        /// <summary>
-        /// Gets process information from the database
-        /// </summary>
+        private static string GetDatabasePath()
+        {
+            return Path.Combine(AppContext.BaseDirectory, DbName);
+        }
+
         public async Task<ProcessInfo?> GetProcessInfoAsync(string processName)
         {
+            if (_disposed) return null;
+
             try
             {
                 await InitializeAsync();
-                
-                if (_database == null)
-                    throw new InvalidOperationException("Database not initialized");
+
+                if (_database == null || _disposed)
+                    return null;
 
                 return await _database.Table<ProcessInfo>()
                     .FirstOrDefaultAsync(p => p.ProcessName.ToLower() == processName.ToLower());
@@ -58,6 +71,58 @@ namespace Plantilla.Services
                 System.Diagnostics.Debug.WriteLine($"Error getting process info: {ex.Message}");
                 return null;
             }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (_database != null)
+                {
+                    try
+                    {
+                        await _database.CloseAsync();
+                    }
+                    catch { }
+                    _database = null;
+                }
+            }
+            finally
+            {
+                _initLock.Dispose();
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (_database != null)
+                {
+                    try
+                    {
+                        _database.GetConnection().Close();
+                    }
+                    catch { }
+                    _database = null;
+                }
+            }
+            finally
+            {
+                _initLock.Dispose();
+                _disposed = true;
+                GC.SuppressFinalize(this);
+            }
+        }
+
+        public void DisposeSync()
+        {
+            Dispose();
         }
     }
 }

@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Application
-    x:Class="Plantilla.App"
+    x:Class="WTHIT.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:Plantilla">
+    xmlns:local="using:WTHIT"
+    xmlns:helpers="using:WTHIT.Helpers">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
 
             <!-- NavigationView Background Resources -->
             <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="{ThemeResource SystemChromeMediumLowColor}"/>
             <SolidColorBrush x:Key="TopNavigationViewTopPaneBackground" Color="{ThemeResource SystemChromeMediumColor}"/>
-            
-            <!-- Other app resources here -->
+
+            <!-- Converters -->
+            <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+
+            <Style x:Key="CardBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,184 +1,136 @@
-using System.Collections.Concurrent;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media.Imaging;
+using WTHIT.Services;
 
-namespace Plantilla.Models
+namespace WTHIT.Models
 {
-    /// <summary>
-    /// Represents a process with properties for name, ID, application relation, virus status, and selection state
-    /// Implements INotifyPropertyChanged to support data binding
-    /// </summary>
-    public class ProcessItem : INotifyPropertyChanged
+    /// <summary>Represents a running process or a group of process instances.</summary>
+    public class ProcessItem : INotifyPropertyChanged, IDisposable
     {
+        private PropertyChangedEventHandler? _propertyChanged;
+        private bool _disposed;
+        private bool _isLoadingIcon;
+
+        private string _processName = string.Empty;
+        private int _processId;
+        private string _applicationRelated = string.Empty;
+        private string _virusStatus = string.Empty;
+        private string _information = "Click to view details";
         private bool _isSelected;
-        private string _virusStatus = "Not Scanned";
+        private bool _isScanned;
+        private string _filePath = string.Empty;
+        private VirusTotalScanResult? _scanDetails;
+        private BitmapImage? _processIcon;
 
-        /// <summary>
-        /// Gets or sets the name of the process
-        /// </summary>
-        public string ProcessName { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Gets or sets the ID of the process
-        /// </summary>
-        public int ProcessId { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the application related to this process
-        /// </summary>
-        public string ApplicationRelated { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Gets or sets the virus scan status of the process
-        /// Notifies listeners when the value changes
-        /// </summary>
-        public string VirusStatus
+        public string ProcessName { get => _processName; set => SetProperty(ref _processName, value); }
+        public int ProcessId { get => _processId; set => SetProperty(ref _processId, value); }
+        public string ApplicationRelated { get => _applicationRelated; set => SetProperty(ref _applicationRelated, value); }
+        public string VirusStatus { get => _virusStatus; set => SetProperty(ref _virusStatus, value); }
+        public string Information { get => _information; set => SetProperty(ref _information, value); }
+        public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+        public bool IsScanned { get => _isScanned; set => SetProperty(ref _isScanned, value); }
+        public string FilePath { get => _filePath; set => SetProperty(ref _filePath, value); }
+        public VirusTotalScanResult? ScanDetails { get => _scanDetails; set => SetProperty(ref _scanDetails, value); }
+        public BitmapImage? ProcessIcon
         {
-            get => _virusStatus;
+            get => _processIcon;
             set
             {
-                if (_virusStatus != value)
+                if (SetProperty(ref _processIcon, value))
+                    OnPropertyChanged(nameof(IconPlaceholderVisibility));
+            }
+        }
+
+        public Visibility IconPlaceholderVisibility => ProcessIcon == null ? Visibility.Visible : Visibility.Collapsed;
+
+        private int _instanceCount = 1;
+        public int InstanceCount
+        {
+            get => _instanceCount;
+            set
+            {
+                if (SetProperty(ref _instanceCount, value))
                 {
-                    _virusStatus = value;
-                    OnPropertyChanged(nameof(VirusStatus));
+                    OnPropertyChanged(nameof(ChevronVisibility));
+                    OnPropertyChanged(nameof(BadgeVisibility));
                 }
             }
         }
 
-        /// <summary>
-        /// Gets or sets the information text for the process
-        /// </summary>
-        public string Information { get; set; } = "Click to view details";
-
-        /// <summary>
-        /// Gets or sets whether the process is selected
-        /// Notifies listeners when the value changes
-        /// </summary>
-        public bool IsSelected
+        private bool _isGroupExpanded;
+        public bool IsGroupExpanded
         {
-            get => _isSelected;
-            set
+            get => _isGroupExpanded;
+            set { if (SetProperty(ref _isGroupExpanded, value)) OnPropertyChanged(nameof(ChevronGlyph)); }
+        }
+
+        private bool _isChildRow;
+        public bool IsChildRow
+        {
+            get => _isChildRow;
+            set { if (SetProperty(ref _isChildRow, value)) OnPropertyChanged(nameof(RowIndent)); }
+        }
+
+        private string _groupCaption = "Process";
+        public string GroupCaption { get => _groupCaption; set => SetProperty(ref _groupCaption, value); }
+
+        public Visibility ChevronVisibility => InstanceCount > 1 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility BadgeVisibility => InstanceCount > 1 ? Visibility.Visible : Visibility.Collapsed;
+        public string ChevronGlyph => IsGroupExpanded ? "\uE70D" : "\uE76C";
+        public Thickness RowIndent => IsChildRow ? new Thickness(18, 0, 0, 0) : new Thickness(0);
+
+        public event PropertyChangedEventHandler? PropertyChanged
+        {
+            add => _propertyChanged += value;
+            remove => _propertyChanged -= value;
+        }
+
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            _propertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /// <summary>Loads the process icon on the UI thread.</summary>
+        public async Task LoadIconAsync()
+        {
+            if (_disposed || _isLoadingIcon || ProcessIcon != null)
+                return;
+
+            _isLoadingIcon = true;
+            try
             {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged(nameof(IsSelected));
-                }
+                var icon = await ProcessIconService.GetIconForProcessAsync(ProcessId, FilePath);
+                if (!_disposed)
+                    ProcessIcon = icon;
+            }
+            finally
+            {
+                _isLoadingIcon = false;
             }
         }
 
-        /// <summary>
-        /// Event that is triggered when a property value changes
-        /// </summary>
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        /// <summary>
-        /// Raises the PropertyChanged event for the specified property
-        /// </summary>
-        /// <param name="propertyName">Name of the property that changed</param>
-        protected virtual void OnPropertyChanged(string propertyName)
+        /// <inheritdoc/>
+        public void Dispose()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        /// <summary>
-        /// Resets the process item to its default state
-        /// </summary>
-        internal void Reset()
-        {
-            ProcessName = string.Empty;
-            ProcessId = 0;
-            ApplicationRelated = string.Empty;
-            _virusStatus = "Not Scanned";
-            Information = "Click to view details";
-            _isSelected = false;
-        }
-
-        /// <summary>
-        /// Copies property values from another process item
-        /// </summary>
-        /// <param name="other">The process item to copy from</param>
-        internal void CopyFrom(ProcessItem other)
-        {
-            if (other == null) return;
-
-            ProcessName = other.ProcessName;
-            ProcessId = other.ProcessId;
-            ApplicationRelated = other.ApplicationRelated;
-            VirusStatus = other.VirusStatus;
-            Information = other.Information;
-            IsSelected = other.IsSelected;
-        }
-    }
-
-    /// <summary>
-    /// Provides a pool of ProcessItem objects to reduce memory allocations
-    /// Uses a concurrent queue for thread-safe operations
-    /// </summary>
-    public static class ProcessItemPool
-    {
-        private static readonly ConcurrentQueue<ProcessItem> _pool = new();
-        private const int MaxPoolSize = 200;
-        private static int _currentPoolSize = 0;
-
-        /// <summary>
-        /// Gets a ProcessItem from the pool or creates a new one if the pool is empty
-        /// </summary>
-        /// <returns>A ProcessItem instance</returns>
-        public static ProcessItem Rent()
-        {
-            if (_pool.TryDequeue(out var item))
-            {
-                System.Threading.Interlocked.Decrement(ref _currentPoolSize);
-                return item;
-            }
-            return new ProcessItem();
-        }
-
-        /// <summary>
-        /// Returns a ProcessItem to the pool for reuse
-        /// </summary>
-        /// <param name="item">The ProcessItem to return to the pool</param>
-        public static void Return(ProcessItem item)
-        {
-            if (item == null || _currentPoolSize >= MaxPoolSize) return;
-
-            item.Reset();
-            _pool.Enqueue(item);
-            System.Threading.Interlocked.Increment(ref _currentPoolSize);
-        }
-
-        /// <summary>
-        /// Returns multiple ProcessItems to the pool
-        /// </summary>
-        /// <param name="items">Collection of ProcessItems to return</param>
-        public static void ReturnRange(System.Collections.Generic.IEnumerable<ProcessItem> items)
-        {
-            if (items == null) return;
-
-            foreach (var item in items)
-            {
-                Return(item);
-            }
-        }
-
-        /// <summary>
-        /// Clears all items from the pool
-        /// </summary>
-        public static void Clear()
-        {
-            while (_pool.TryDequeue(out _))
-            {
-                System.Threading.Interlocked.Decrement(ref _currentPoolSize);
-            }
-        }
-
-        /// <summary>
-        /// Gets statistics about the pool
-        /// </summary>
-        /// <returns>A tuple containing the current pool size and maximum pool size</returns>
-        public static (int PoolSize, int MaxSize) GetPoolStats()
-        {
-            return (_currentPoolSize, MaxPoolSize);
+            if (_disposed) return;
+            _disposed = true;
+            _processIcon = null;
+            _scanDetails = null;
+            _propertyChanged = null;
+            GC.SuppressFinalize(this);
         }
     }
 }

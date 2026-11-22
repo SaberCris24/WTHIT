@@ -1,205 +1,457 @@
 <Page
-    x:Class="Plantilla.Pages.Processes.ProcessesPage"
+    x:Class="WTHIT.Pages.Processes.ProcessesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:WTHIT.Models"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <!-- Template for the ListView items panel (Virtualized StackPanel) -->
+        <ItemsPanelTemplate x:Key="ItemsStackPanelTemplate">
+            <ItemsStackPanel/>
+        </ItemsPanelTemplate>
+
+        <!-- Custom style for ListView items to remove default borders and add hover effects -->
+        <Style x:Key="ProcessListViewItemStyle" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="MinHeight" Value="54"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <ListViewItemPresenter ContentTransitions="{TemplateBinding ContentTransitions}"
+                                             Padding="{TemplateBinding Padding}"
+                                             HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                             VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                             SelectedPointerOverBorderBrush="Transparent"
+                                             PointerOverBorderBrush="Transparent"
+                                             SelectedBorderBrush="Transparent"
+                                             BorderBrush="Transparent"
+                                             BorderThickness="0"
+                                             PointerOverBackground="{ThemeResource ControlFillColorSecondaryBrush}"
+                                             SelectedPointerOverBackground="{ThemeResource ControlFillColorSecondaryBrush}"
+                                             SelectedBackground="{TemplateBinding Background}"
+                                             Background="{TemplateBinding Background}"
+                                             CornerRadius="8"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataTemplate for rendering individual process items -->
+        <DataTemplate x:Key="ProcessItemTemplate" x:DataType="models:ProcessItem">
+            <Grid MinHeight="54"
+                  Padding="16,10"
+                  ToolTipService.ToolTip="Open process details">
+                <Grid.ColumnDefinitions>
+                    <!-- Column 0: Selection Checkbox -->
+                    <ColumnDefinition Width="44"/>
+                    <!-- Column 1: Expand/Collapse Chevron for grouped processes -->
+                    <ColumnDefinition Width="24"/>
+                    <!-- Column 2: Process Icon, Name, and Instance Badge -->
+                    <ColumnDefinition Width="2.2*"/>
+                    <!-- Column 3: Process ID (PID) -->
+                    <ColumnDefinition Width="130"/>
+                    <!-- Column 4: Related Application Name -->
+                    <ColumnDefinition Width="1.6*"/>
+                    <!-- Column 5: Details/Action Button -->
+                    <ColumnDefinition Width="140"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Checkbox -->
+                <CheckBox Grid.Column="0"
+                          IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Center"
+                          MinWidth="20"
+                          AutomationProperties.Name="{x:Bind ProcessName}"/>
+
+                <!-- Expand/Collapse Chevron -->
+                <Button Grid.Column="1"
+                        Width="24" Height="24" Padding="0"
+                        Background="Transparent" BorderThickness="0" CornerRadius="4"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Click="ToggleGroup_Click"
+                        Visibility="{x:Bind ChevronVisibility, Mode=OneWay}"
+                        ToolTipService.ToolTip="Show/hide instances">
+                    <FontIcon Glyph="{x:Bind ChevronGlyph, Mode=OneWay}"
+                              FontSize="10"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Button>
+
+                <!-- Icon + Name Unit -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Margin="{x:Bind RowIndent, Mode=OneWay}">
+                    <Grid Width="28" Height="28" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE7C4;" FontSize="16"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  Visibility="{x:Bind IconPlaceholderVisibility, Mode=OneWay}"/>
+                        <Image Source="{x:Bind ProcessIcon, Mode=OneWay}"/>
+                    </Grid>
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="{x:Bind ProcessName}"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="300"/>
+                        <TextBlock Text="{x:Bind GroupCaption, Mode=OneWay}"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    
+                    <!-- Instance Count Badge -->
+                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                            CornerRadius="10" 
+                            Padding="8,3"
+                            VerticalAlignment="Center"
+                            Visibility="{x:Bind BadgeVisibility, Mode=OneWay}">
+                        <TextBlock Text="{x:Bind InstanceCount, Mode=OneWay}"
+                                   FontSize="11" 
+                                   FontWeight="Bold" 
+                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                   CharacterSpacing="10"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- PID -->
+                <StackPanel Grid.Column="3"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Margin="8,0">
+                    <FontIcon Glyph="&#xE70B;"
+                              FontSize="11"
+                              Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                              VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind ProcessId}"
+                               FontWeight="Medium"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Application Related -->
+                <StackPanel Grid.Column="4"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Margin="32,0,8,0"
+                            ToolTipService.ToolTip="{x:Bind ApplicationRelated}">
+                    <FontIcon Glyph="&#xE7F4;"
+                              FontSize="11"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind ApplicationRelated}"
+                               TextTrimming="CharacterEllipsis"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               MaxWidth="260"/>
+                </StackPanel>
+
+                <!-- Details Button -->
+                <Button Grid.Column="5"
+                        x:Name="VirusStatusButton"
+                        Click="VirusStatusButton_Click"
+                        Width="120"
+                        Height="32"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource AccentButtonStyle}"
+                        CornerRadius="6"
+                        Padding="0"
+                        ToolTipService.ToolTip="View process details">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE946;" FontSize="12"/>
+                        <TextBlock Text="See details"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <!-- Main Layout Grid -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        
-        <!-- Header -->
-        <Grid Grid.Row="0" Padding="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
 
-            <!-- Title -->
-            <TextBlock
-                Style="{ThemeResource TitleLargeTextBlockStyle}"
-                x:Name="TitleTextBlock"
-                Text="What The Hell Is This?"
-                FontSize="40"
-                FontWeight="Bold"
-                Margin="0,25,0,0"
-                VerticalAlignment="Center"
-                TextTrimming="CharacterEllipsis"
-                Grid.Column="0"/>
+        <!-- Header Section: Contains title, description, and main action buttons -->
+        <StackPanel Grid.Row="0" Margin="24,24,24,16">
+            <TextBlock Text="What The Hell Is This?"
+                       Style="{ThemeResource TitleLargeTextBlockStyle}"
+                       FontSize="40"
+                       FontWeight="Bold"
+                       Margin="80,25,0,8"/>
 
-            <!-- Controls: Scan, Search, Refresh -->
-            <StackPanel Grid.Column="1"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Right"
-                        Margin="0,25,0,0"
-                        Orientation="Horizontal"
-                        MinWidth="320">
-                <Button x:Name="ScanButton"
-                        Click="ScanButton_Click"
-                        IsEnabled="{x:Bind IsProcessSelected, Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE9F9;"/>
-                        <TextBlock Text="Scan Selected Process"/>
-                    </StackPanel>
-                </Button>
+            <TextBlock Text="Explore and analyze running processes"
+                       Style="{ThemeResource BodyTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Margin="80,0,0,20"/>
 
-                <AutoSuggestBox 
-                    x:Name="SearchBox"
-                    PlaceholderText="Search for processes"
-                    QueryIcon="Find"
-                    Width="200"
-                    QuerySubmitted="SearchBox_QuerySubmitted"
-                    TextChanged="SearchBox_TextChanged"
-                    SuggestionChosen="SearchBox_SuggestionChosen"
-                    Margin="8,0,0,0"/>
+            <!-- Action Bar: Scan, Search, Filter, Refresh -->
+            <Grid Margin="80,0,80,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <Button x:Name="RefreshButton"
-                        Click="RefreshButton_Click"
-                        Width="32"
-                        Height="32"
-                        Padding="4"
-                        ToolTipService.ToolTip="Refresh List"
-                        Margin="8,0,0,0">
-                    <FontIcon Glyph="&#xE72C;" FontSize="14"/>
-                </Button>
-            </StackPanel>
-        </Grid>
-        
-        <!-- Process List -->
-        <Border Grid.Row="1" 
-                Margin="20"
-                CornerRadius="8"
-                BorderThickness="1"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-            
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Headers -->
-                <Grid Grid.Row="0" 
-                      Padding="16,12"
-                      Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="0.8*"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="1*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button Grid.Column="0"
-                            Click="OrderBy_Name"
-                            CornerRadius="4"
-                            Padding="0"
-                            Background="Transparent"
-                            BorderBrush="Transparent">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="4">
-                            <TextBlock Text="Process Name" FontWeight="SemiBold" />
-                            <FontIcon x:Name="SortByNameIcon_Name" Glyph="&#xE96D;"/>
+                <!-- Primary Action: Scan -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="ScanButton"
+                            Click="ScanButton_Click"
+                            Padding="16,8"
+                            Style="{StaticResource AccentButtonStyle}"
+                            CornerRadius="6"
+                            AutomationProperties.Name="Scan selected processes"
+                            IsEnabled="{x:Bind IsProcessSelected, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE9F9;" FontSize="14"/>
+                            <TextBlock Text="Scan selected" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                </StackPanel>
 
-                    <Button Grid.Column="1"
-                            Click="OrderBy_Id"
-                            CornerRadius="4"
-                            Padding="0"
-                            Background="Transparent"
-                            BorderBrush="Transparent">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
-                            <TextBlock Text="Process Id" FontWeight="SemiBold" />
-                            <FontIcon x:Name="SortByNameIcon_Id" Glyph="&#xE96D;"/>
-                        </StackPanel>
+                <!-- Secondary Actions: Search, Filter, Refresh -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <AutoSuggestBox x:Name="SearchBox"
+                                    PlaceholderText="Search processes"
+                                    QueryIcon="Find"
+                                    MinWidth="250"
+                                    MaxWidth="400"
+                                    Width="Auto"
+                                    VerticalAlignment="Center"
+                                    QuerySubmitted="SearchBox_QuerySubmitted"
+                                    TextChanged="SearchBox_TextChanged"
+                                    SuggestionChosen="SearchBox_SuggestionChosen"
+                                    AutomationProperties.Name="Search processes"/>
+
+                    <!-- Filter Flyout Menu -->
+                    <Button x:Name="FilterButton"
+                            Width="36" Height="36" Padding="0"
+                            ToolTipService.ToolTip="Filter"
+                            AutomationProperties.Name="Filter processes"
+                            CornerRadius="6">
+                        <Button.Flyout>
+                            <MenuFlyout x:Name="FilterFlyout" Placement="Bottom">
+                                <ToggleMenuFlyoutItem Text="Filter by Name"
+                                                      x:Name="FilterByNameItem"
+                                                      Click="FilterByName_Click">
+                                    <ToggleMenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xF156;"/>
+                                    </ToggleMenuFlyoutItem.Icon>
+                                </ToggleMenuFlyoutItem>
+                                <ToggleMenuFlyoutItem Text="Filter by PID"
+                                                      x:Name="FilterByPidItem"
+                                                      Click="FilterByPid_Click">
+                                    <ToggleMenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE70B;"/>
+                                    </ToggleMenuFlyoutItem.Icon>
+                                </ToggleMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Clear Filters" Click="ClearFilters_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE711;"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                        <FontIcon Glyph="&#xE71C;" FontSize="14"/>
                     </Button>
 
-                    <TextBlock Grid.Column="2" 
-                             Text="Application Related"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Column="3" 
-                             Text="Virus Status"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Column="4" 
-                             Text="Information"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"/>
-                </Grid>
-
-                <!-- Process List -->
-                <ListView x:Name="ProcessListView"
-                         Grid.Row="1"
-                         SelectionMode="None"
-                         IsItemClickEnabled="True"
-                         ItemClick="ProcessListView_ItemClick">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="0.8*"/>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="1*"/>
-                                    <ColumnDefinition Width="1*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Grid.Column="0" 
-                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                         Content="{Binding ProcessName}"
-                                         Checked="ProcessCheckBox_Checked"
-                                         Unchecked="ProcessCheckBox_Unchecked"/>
-                                
-                                <TextBlock Grid.Column="1" 
-                                         Text="{Binding ProcessId}"
-                                         VerticalAlignment="Center"
-                                         HorizontalAlignment="Left"/>
-                                
-                                <TextBlock Grid.Column="2" 
-                                         Text="{Binding ApplicationRelated}"
-                                         VerticalAlignment="Center"
-                                         HorizontalAlignment="Center"/>
-                                
-                                <TextBlock Grid.Column="3" 
-                                         Text="{Binding VirusStatus}"
-                                         VerticalAlignment="Center"
-                                         HorizontalAlignment="Center"/>
-                                
-                                <Button Grid.Column="4"
-                                        Content="View Info"
-                                        Click="ViewDetails_Click"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        BorderThickness="0"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                    <Button x:Name="RefreshButton"
+                            Click="RefreshButton_Click"
+                            Width="36" Height="36" Padding="0"
+                            ToolTipService.ToolTip="Refresh"
+                            AutomationProperties.Name="Refresh processes list"
+                            CornerRadius="6">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14"/>
+                    </Button>
+                </StackPanel>
             </Grid>
-        </Border>
+        </StackPanel>
 
-        <!-- Loading and Status Indicators -->
-        <ProgressRing x:Name="LoadingRing"
-                      Grid.Row="1"
-                      Width="50"
-                      Height="50"
-                      IsActive="False"/>
+        <!-- Data Table Section: Contains headers and the virtualized ListView -->
+        <Grid Grid.Row="1" Margin="80,0,80,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <InfoBar x:Name="StatusInfoBar"
-                 Grid.Row="1"
-                 IsOpen="False"
-                 VerticalAlignment="Bottom"
-                 Margin="20"/>
+            <!-- Process Count Indicator -->
+            <TextBlock Grid.Row="0"
+                       Text="{x:Bind ProcessCountText, Mode=OneWay}"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Margin="0,0,0,8"
+                       HorizontalAlignment="Right"/>
+
+            <!-- Main Card Container -->
+            <Border Grid.Row="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Table Headers -->
+                    <Grid Grid.Row="0"
+                          Padding="16,12"
+                          Background="{ThemeResource LayerFillColorAltBrush}"
+                          CornerRadius="12,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="44"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="2.2*"/>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="1.6*"/>
+                            <ColumnDefinition Width="140"/>
+                        </Grid.ColumnDefinitions>
+
+                        <CheckBox Grid.Column="0"
+                                  x:Name="SelectAllCheckBox"
+                                  Checked="SelectAllCheckBox_Checked"
+                                  Unchecked="SelectAllCheckBox_Unchecked"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Center"
+                                  MinWidth="20"
+                                  ToolTipService.ToolTip="Select All"/>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    HorizontalAlignment="Left"
+                                    Margin="6,0,12,0"
+                                    VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE8A5;"
+                                      FontSize="12"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="Process Name"
+                                       FontWeight="SemiBold"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    HorizontalAlignment="Left"
+                                    Margin="8,0"
+                                    VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE70B;"
+                                      FontSize="11"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="PID"
+                                       FontWeight="SemiBold"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    HorizontalAlignment="Left"
+                                    Margin="32,0,8,0"
+                                    VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7F4;"
+                                      FontSize="11"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="Application"
+                                       FontWeight="SemiBold"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="5"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE946;"
+                                      FontSize="11"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="Details"
+                                       FontWeight="SemiBold"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Header Separator Line -->
+                    <Rectangle Grid.Row="0"
+                               Height="1"
+                               Fill="{ThemeResource CardStrokeColorDefaultBrush}"
+                               VerticalAlignment="Bottom"/>
+
+                    <!-- Virtualized Process List -->
+                    <ListView x:Name="ProcessListView"
+                              Grid.Row="1"
+                              MinHeight="300"
+                              SelectionMode="None"
+                              IsItemClickEnabled="True"
+                              ItemClick="ProcessListView_ItemClick"
+                              ContainerContentChanging="ProcessListView_ContainerContentChanging"
+                              ItemContainerStyle="{StaticResource ProcessListViewItemStyle}"
+                              ItemTemplate="{StaticResource ProcessItemTemplate}"
+                              ItemsPanel="{StaticResource ItemsStackPanelTemplate}"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              BorderThickness="0"
+                              Padding="0,4"
+                              Margin="0"/>
+
+                    <!-- Loading Indicator -->
+                    <ProgressRing x:Name="LoadingRing"
+                                  Grid.Row="1"
+                                  Width="40"
+                                  Height="40"
+                                  IsActive="False"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Opacity="0.8"/>
+
+                    <!-- Empty State Message -->
+                    <TextBlock x:Name="EmptyStateText"
+                               Grid.Row="1"
+                               Text="No processes to display"
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="Collapsed"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

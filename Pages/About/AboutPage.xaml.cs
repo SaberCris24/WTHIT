@@ -1,46 +1,68 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.DataTransfer;
-using CommunityToolkit.WinUI.Controls;
+using System;
+using System.Threading.Tasks;
 
-namespace Plantilla.Pages.About
+namespace WTHIT.Pages.About
 {
     /// <summary>
-    /// Page that displays information about the application, including repository details
+    /// About page displaying application information - optimized
     /// </summary>
-    public sealed partial class AboutPage : Page
+    public sealed partial class AboutPage : Page, IDisposable
     {
-        /// <summary>
-        /// Initializes a new instance of the AboutPage class
-        /// </summary>
+        private bool _disposed;
+
+        /// <summary>Displays the version embedded in the application assembly at build time.</summary>
+        public string AppVersion { get; } = typeof(AboutPage).Assembly.GetName().Version?.ToString() ?? "Unknown";
+
         public AboutPage()
         {
-            this.InitializeComponent();
+            InitializeComponent();
+            NavigationCacheMode = NavigationCacheMode.Disabled;
+            Unloaded += OnPageUnloaded;
         }
 
-        /// <summary>
-        /// Handles the click event for the copy git command button
-        /// Copies the git clone command to the clipboard and temporarily changes the button text
-        /// </summary>
-        /// <param name="sender">The button that triggered the event</param>
-        /// <param name="e">Event data for the click event</param>
-        private void CopyGitCommand_Click(object sender, RoutedEventArgs e)
+        private void OnPageUnloaded(object sender, RoutedEventArgs e)
+        {
+            CopyGitButton.Click -= CopyGitCommand_Click;
+        }
+
+        private async void CopyGitCommand_Click(object sender, RoutedEventArgs e)
         {
             var dataPackage = new DataPackage();
-            dataPackage.SetText("git clone https://github.com/SaberCris24/WTHIT");
+            dataPackage.SetText(GitCommandText.Text);
             Clipboard.SetContent(dataPackage);
 
-            if (sender is SettingsCard card)
+            if (sender is Button button)
             {
-                // Save the original header safely
-                string headerText = card.Header?.ToString() ?? "Clone Repository";
-                card.Header = "Copied!";
-                
-                DispatcherQueue.TryEnqueue(() =>
+                var originalText = CopyButtonText.Text;
+                CopyButtonText.Text = "Copied!";
+                button.IsEnabled = false;
+
+                await Task.Delay(2000);
+
+                if (!_disposed)
                 {
-                    card.Header = headerText;
-                });
+                    CopyButtonText.Text = originalText;
+                    button.IsEnabled = true;
+                }
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            Unloaded -= OnPageUnloaded;
+            _disposed = true;
+            GC.SuppressFinalize(this);
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            Dispose();
         }
     }
 }

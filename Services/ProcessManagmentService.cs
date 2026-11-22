@@ -2,87 +2,77 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Plantilla.Models;
+using WTHIT.Models;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
     /// <summary>
-    /// Interface for managing system processes
+    /// Retrieves running processes and their executable paths.
     /// </summary>
-    public interface IProcessManagementService
+    public sealed class ProcessManagementService : IDisposable
     {
-        /// <summary>
-        /// Gets all running processes
-        /// </summary>
-        List<ProcessItem> GetAllProcesses();
+        private readonly ApplicationInfoService _applicationInfoService;
+        private bool _disposed;
 
-        /// <summary>
-        /// Refreshes the process list
-        /// </summary>
-        Task RefreshProcessesAsync();
-
-        /// <summary>
-        /// Gets a process by its ID
-        /// </summary>
-        Process? GetProcessById(int processId);
-
-        /// <summary>
-        /// Gets the file path of a process
-        /// </summary>
-        string GetProcessPath(Process process);
-
-        /// <summary>
-        /// Checks if a process is accessible
-        /// </summary>
-        bool IsProcessAccessible(Process process);
-    }
-
-    /// <summary>
-    /// Service for managing system processes
-    /// </summary>
-    public class ProcessManagementService : IProcessManagementService
-    {
-        private readonly IApplicationInfoService _applicationInfoService;
-        
-        /// <summary>
-        /// Creates a new process management service
-        /// </summary>
-        public ProcessManagementService(IApplicationInfoService applicationInfoService)
+        public ProcessManagementService(ApplicationInfoService applicationInfoService)
         {
             _applicationInfoService = applicationInfoService;
         }
 
         /// <summary>
-        /// Gets a list of all running processes
+        /// Gets all accessible processes.
+        /// Each Process object is disposed as soon as its data is read.
         /// </summary>
         public List<ProcessItem> GetAllProcesses()
         {
             var processes = new List<ProcessItem>();
+
             foreach (Process process in Process.GetProcesses())
             {
-                processes.Add(new ProcessItem
+                try
                 {
-                    ProcessName = process.ProcessName,
-                    ProcessId = process.Id,
-                    ApplicationRelated = _applicationInfoService.GetApplicationInfo(process),
-                    VirusStatus = "Not Scanned",
-                    Information = "Click to view details",
-                    IsSelected = false
-                });
+                    processes.Add(new ProcessItem
+                    {
+                        ProcessName = process.ProcessName,
+                        ProcessId = process.Id,
+                        ApplicationRelated = _applicationInfoService.GetApplicationInfo(process),
+                        VirusStatus = "Not Scanned",
+                        Information = "Click to view details",
+                        IsSelected = false
+                    });
+                }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    // Process is inaccessible or already terminated.
+                    Debug.WriteLine($"Skipping inaccessible process: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Unexpected error reading process: {ex.Message}");
+                }
+                finally
+                {
+                    process.Dispose();
+                }
             }
+
             return processes;
         }
 
         /// <summary>
-        /// Refreshes the list of processes
+        /// Gets all processes asynchronously.
         /// </summary>
-        public async Task RefreshProcessesAsync()
-        {
-            await Task.Run(() => Process.GetProcesses());
-        }
+        public async Task<List<ProcessItem>> GetAllProcessesAsync() =>
+            await Task.Run(() => GetAllProcesses());
 
         /// <summary>
-        /// Gets a process by its ID
+        /// Kept for compatibility, but no longer needed.
+        /// The page refresh logic already reloads processes correctly.
+        /// </summary>
+        public Task RefreshProcessesAsync() => Task.CompletedTask;
+
+        /// <summary>
+        /// Gets a process by ID. Caller is responsible for disposing the returned process.
         /// </summary>
         public Process? GetProcessById(int processId)
         {
@@ -98,25 +88,41 @@ namespace Plantilla.Services
             {
                 return null;
             }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return null;
+            }
         }
 
         /// <summary>
-        /// Gets the file path of a process
+        /// Gets the executable path for a process.
+        /// Queries the path with limited process access before trying the main module.
         /// </summary>
         public string GetProcessPath(Process process)
         {
+            if (process == null)
+                return string.Empty;
+
             try
             {
-                return process.MainModule?.FileName ?? "Path not available";
+                var path = ProcessIconExtractor.GetImagePath(process.Id);
+                if (!string.IsNullOrWhiteSpace(path))
+                    return path;
+
+                return process.MainModule?.FileName ?? string.Empty;
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
             {
-                return "Access denied";
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
 
         /// <summary>
-        /// Checks if a process can be accessed
+        /// Checks whether a process is accessible enough to read basic module info.
         /// </summary>
         public bool IsProcessAccessible(Process process)
         {
@@ -128,6 +134,16 @@ namespace Plantilla.Services
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Disposes the service.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            GC.SuppressFinalize(this);
         }
     }
 }

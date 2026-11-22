@@ -1,95 +1,81 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Plantilla.Models;
+using WTHIT.Models;
 
-namespace Plantilla.Services
+namespace WTHIT.Services
 {
     /// <summary>
-    /// Interface for searching and sorting processes
+    /// Service for searching and sorting processes - highly optimized with Span and caching
     /// </summary>
-    public interface IProcessSearchService
+    public sealed class ProcessSearchService
     {
-        /// <summary>
-        /// Searches processes based on text
-        /// </summary>
-        IEnumerable<ProcessItem> SearchProcesses(IEnumerable<ProcessItem> processes, string searchText);
+        private static readonly Lazy<ProcessSearchService> _instance = new(() => new ProcessSearchService());
+        public static ProcessSearchService Shared => _instance.Value;
 
-        /// <summary>
-        /// Gets search suggestions from process names
-        /// </summary>
-        List<string> GetSearchSuggestions(IEnumerable<ProcessItem> processes, string searchText, int maxSuggestions = 5);
+        private static readonly StringComparer _comparer = StringComparer.OrdinalIgnoreCase;
+        private readonly Func<ProcessItem, string, bool> _searchPredicate;
+        private readonly Core.ExpiringCache<string, List<string>> _suggestionCache;
 
-        /// <summary>
-        /// Sorts processes by specified criteria
-        /// </summary>
-        IEnumerable<ProcessItem> SortProcesses(IEnumerable<ProcessItem> processes, string sortBy, bool ascending);
-    }
+        private ProcessSearchService()
+        {
+            _suggestionCache = new Core.ExpiringCache<string, List<string>>(TimeSpan.FromSeconds(30), 50);
+            _searchPredicate = (p, s) =>
+                ContainsIgnoreCase(p.ProcessName, s) ||
+                (p.ApplicationRelated != null && ContainsIgnoreCase(p.ApplicationRelated, s));
+        }
 
-    /// <summary>
-    /// Service for searching and sorting processes
-    /// </summary>
-    public class ProcessSearchService : IProcessSearchService
-    {
-        /// <summary>
-        /// Filters processes based on search text
-        /// </summary>
+        private static bool ContainsIgnoreCase(string text, string search)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(search))
+                return false;
+
+            return text.AsSpan().IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         public IEnumerable<ProcessItem> SearchProcesses(IEnumerable<ProcessItem> processes, string searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
-            {
                 return processes;
-            }
 
-            return processes.Where(p => 
-                p.ProcessName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                p.ApplicationRelated?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true
-            );
+            var results = processes.Where(p => _searchPredicate(p, searchText));
+            return results;
         }
 
-        /// <summary>
-        /// Gets process name suggestions based on input text
-        /// </summary>
         public List<string> GetSearchSuggestions(IEnumerable<ProcessItem> processes, string searchText, int maxSuggestions = 5)
         {
             if (string.IsNullOrWhiteSpace(searchText))
+                return new List<string>(0);
+
+            if (_suggestionCache.TryGet(searchText, out var cached))
             {
-                return new List<string>();
+                return cached;
             }
 
-            return processes
-                .Where(p => p.ProcessName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            var suggestions = processes
+                .Where(p => ContainsIgnoreCase(p.ProcessName, searchText))
                 .Select(p => p.ProcessName)
-                .Distinct()
+                .Distinct(_comparer)
                 .Take(maxSuggestions)
                 .ToList();
+
+            _suggestionCache.Set(searchText, suggestions, TimeSpan.FromSeconds(30));
+            return suggestions;
         }
 
-        /// <summary>
-        /// Sorts processes by name, ID, or application
-        /// </summary>
         public IEnumerable<ProcessItem> SortProcesses(IEnumerable<ProcessItem> processes, string sortBy, bool ascending)
         {
-            IOrderedEnumerable<ProcessItem> sortedProcesses = sortBy.ToLower() switch
+            return sortBy.ToLowerInvariant() switch
             {
-                "name" => ascending
-                    ? processes.OrderBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
-                    : processes.OrderByDescending(p => p.ProcessName, StringComparer.OrdinalIgnoreCase),
-                
-                "id" => ascending
-                    ? processes.OrderBy(p => p.ProcessId)
-                    : processes.OrderByDescending(p => p.ProcessId),
-                
-                "application" => ascending
-                    ? processes.OrderBy(p => p.ApplicationRelated ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                    : processes.OrderByDescending(p => p.ApplicationRelated ?? string.Empty, StringComparer.OrdinalIgnoreCase),
-                
-                _ => ascending
-                    ? processes.OrderBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
-                    : processes.OrderByDescending(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
+                "name" when ascending => processes.OrderBy(p => p.ProcessName, _comparer),
+                "name" => processes.OrderByDescending(p => p.ProcessName, _comparer),
+                "id" when ascending => processes.OrderBy(p => p.ProcessId),
+                "id" => processes.OrderByDescending(p => p.ProcessId),
+                "application" when ascending => processes.OrderBy(p => p.ApplicationRelated ?? string.Empty, _comparer),
+                "application" => processes.OrderByDescending(p => p.ApplicationRelated ?? string.Empty, _comparer),
+                _ when ascending => processes.OrderBy(p => p.ProcessName, _comparer),
+                _ => processes.OrderByDescending(p => p.ProcessName, _comparer)
             };
-
-            return sortedProcesses;
         }
     }
 }

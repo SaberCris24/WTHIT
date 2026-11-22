@@ -1,97 +1,402 @@
 <Page
-    x:Class="Plantilla.Pages.About.AboutPage"
+    x:Class="WTHIT.Pages.About.AboutPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
 
-    <!-- ScrollViewer to allow vertical scrolling -->
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   ZoomMode="Disabled">
-        
+
         <StackPanel Margin="24">
-            <!-- Main title "About" -->
+            <StackPanel.ChildrenTransitions>
+                <TransitionCollection>
+                    <EntranceThemeTransition FromVerticalOffset="12"/>
+                </TransitionCollection>
+            </StackPanel.ChildrenTransitions>
+
+            <!-- Page Title -->
             <TextBlock Text="About"
-                     Style="{ThemeResource TitleLargeTextBlockStyle}"
-                     FontSize="40"
-                     FontWeight="Bold"
-                     Margin="80,25,0,0"/>
+                       Style="{ThemeResource TitleLargeTextBlockStyle}"
+                       FontSize="40"
+                       FontWeight="Bold"
+                       Margin="80,25,0,8"/>
 
-            <!-- Program description -->
-            <TextBlock
-                      Margin="80,25,80,0"
-                      Style="{ThemeResource BodyTextBlockStyle}"    
-                      TextWrapping="Wrap"
-                      Text="WTHIT (What The Hell Is This) is a powerful system monitoring tool that allows you to explore and understand the processes running on your PC. It helps you identify which applications are associated with running processes, scan files using the VirusTotal API to detect potential malicious content, and provides detailed information about all active processes in your system." />
+            <TextBlock Text="Learn more about this application"
+                       Style="{ThemeResource BodyTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Margin="80,0,0,24"/>
 
-            <!-- Subtitle "More information" -->
-            <TextBlock Text="More information"
-                     Style="{ThemeResource SubtitleTextBlockStyle}"
-                     FontWeight="SemiBold"
-                     Opacity="0.9"
-                     Margin="80,25,0,16"/>
-
-            <!-- SettingsExpander content -->
+            <!-- Hero Card -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    CornerRadius="4"
-                    Margin="80,0,80,8">
-                <toolkit:SettingsExpander Description="Coded With Soul by Cristian Florez and Jeremy Machado."
-                                        Header="WTHIT"
-                                        Margin="16,16,16,16">
-                    <toolkit:SettingsExpander.HeaderIcon>
-                        <BitmapIcon ShowAsMonochrome="False" 
-                                   UriSource="/Assets/icon.ico"/>
-                    </toolkit:SettingsExpander.HeaderIcon>
-                    
-                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                             IsTextSelectionEnabled="True"
-                             Text="Version 1.0"/>
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Margin="80,0,80,16"
+                    Padding="24">
 
-                    <toolkit:SettingsExpander.Items>
-                        <toolkit:SettingsCard x:Name="toCloneRepoCard"
-                                            Click="CopyGitCommand_Click"
-                                            Header="To clone this repository"
-                                            IsClickEnabled="True">
-                            <TextBlock x:Name="gitCloneTextBlock"
-                                     FontFamily="Consolas"
-                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                     IsTextSelectionEnabled="True"
-                                     Text="git clone https://github.com/SaberCris24/WTHIT"/>
-                            <toolkit:SettingsCard.ActionIcon>
-                                <FontIcon Glyph="&#xE8C8;"/>
-                            </toolkit:SettingsCard.ActionIcon>
-                        </toolkit:SettingsCard>
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                        <!-- Dependencies and References -->
-                        <toolkit:SettingsCard HorizontalContentAlignment="Left"
-                                            ContentAlignment="Vertical"
-                                            Header="Dependencies &amp; references">
-                            <StackPanel Margin="-12,0,0,0" 
-                                      Orientation="Vertical">
-                                <HyperlinkButton Content="Windows App SDK" 
-                                               NavigateUri="https://github.com/microsoft/WindowsAppSDK/"/>
-                                <HyperlinkButton Content="WinUI 3" 
-                                               NavigateUri="https://github.com/microsoft/microsoft-ui-xaml"/>
-                                <HyperlinkButton Content="DevWinUI" 
-                                               NavigateUri="https://github.com/ghost1372/DevWinUI"/>
-                                <HyperlinkButton Content="Windows Community Toolkit" 
-                                               NavigateUri="https://aka.ms/toolkit/windows"/>
-                                <HyperlinkButton Content="SQLite-net" 
-                                               NavigateUri="https://github.com/praeclarum/sqlite-net?tab=readme-ov-file"/>
-                                <HyperlinkButton Content="VirusTotal API v3" 
-                                               NavigateUri="https://docs.virustotal.com/reference/overview"/>
-                            </StackPanel>
-                        </toolkit:SettingsCard>
-                    </toolkit:SettingsExpander.Items>
-                </toolkit:SettingsExpander>
+                    <Border Grid.Column="0"
+                            Width="80" Height="80"
+                            CornerRadius="16"
+                            VerticalAlignment="Center">
+                        <Image Source="/Assets/icon.png"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- App Info -->
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Spacing="6">
+                        <TextBlock Text="WTHIT"
+                                   FontWeight="Bold"
+                                   FontSize="28"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="What The Hell Is This?"
+                                   FontSize="14"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="10"
+                                    Padding="10,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE943;"
+                                              FontSize="11"
+                                              Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}">
+                                        <Run Text="v"/>
+                                        <Run Text="{x:Bind AppVersion}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Text="Coded with soul by Cristian Florez and Jeremy Machado"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- Bottom spacing for better scrolling experience -->
-            <Border Height="40"/>
-            
+            <!-- What is WTHIT? -->
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="80,24,0,12">
+                <FontIcon Glyph="&#xE946;"
+                          FontSize="18"
+                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="What is WTHIT?"
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Margin="80,0,80,16"
+                    Padding="24">
+
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <FontIcon Grid.Column="0"
+                              Glyph="&#xE82F;"
+                              FontSize="20"
+                              Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                              VerticalAlignment="Top"
+                              Margin="4,2,0,0"/>
+
+                    <TextBlock Grid.Column="1"
+                               Text="WTHIT is a powerful system monitoring tool that allows you to explore and understand the processes running on your PC. It helps you identify which applications are associated with running processes, scan files using the VirusTotal API to detect potential malicious content, and provides detailed information about all active processes in your system."
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               LineHeight="24"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                </Grid>
+            </Border>
+
+            <!-- Source Code -->
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="80,24,0,12">
+                <FontIcon Glyph="&#xE716;"
+                          FontSize="18"
+                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="Source Code"
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Margin="80,0,80,16"
+                    Padding="24">
+
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE721;"
+                                  FontSize="20"
+                                  Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                  VerticalAlignment="Center"
+                                  Margin="4,0"/>
+
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="GitHub Repository"
+                                       FontWeight="SemiBold"
+                                       FontSize="14"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Open source and community driven"
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Background="{ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="16,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       x:Name="GitCommandText"
+                                       Text="git clone https://github.com/SaberY24/WTHIT.git"
+                                       FontFamily="Consolas"
+                                       FontSize="13"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+
+                            <Button Grid.Column="1"
+                                    x:Name="CopyGitButton"
+                                    Click="CopyGitCommand_Click"
+                                    Padding="12,6"
+                                    CornerRadius="6"
+                                    ToolTipService.ToolTip="Copy to clipboard"
+                                    VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon x:Name="CopyIcon"
+                                              Glyph="&#xE8C8;"
+                                              FontSize="12"/>
+                                    <TextBlock x:Name="CopyButtonText"
+                                               Text="Copy"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Built With -->
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="80,24,0,12">
+                <FontIcon Glyph="&#xE8F1;"
+                          FontSize="18"
+                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="Built With"
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Margin="80,0,80,16"
+                    Padding="20">
+
+                <StackPanel Spacing="12">
+                    <!-- Row 1 -->
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE7F4;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Windows App SDK"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="View on GitHub"
+                                                     NavigateUri="https://github.com/microsoft/WindowsAppSDK/"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE790;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="WinUI 3"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="View on GitHub"
+                                                     NavigateUri="https://github.com/microsoft/microsoft-ui-xaml/"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Row 2 -->
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE774;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Community Toolkit"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="Learn more"
+                                                     NavigateUri="https://aka.ms/toolkit/windows"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE9F9;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="SQLite-net"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="View on GitHub"
+                                                     NavigateUri="https://github.com/praeclarum/sqlite-net"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Row 3 -->
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE72C;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="VirusTotal API v3"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="View docs"
+                                                     NavigateUri="https://docs.virustotal.com/reference/overview"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE7BF;"
+                                          FontSize="20"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="WinUIEx"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <HyperlinkButton Content="View on GitHub"
+                                                     NavigateUri="https://github.com/FilesCommunity/WinUIEx"
+                                                     Padding="0"
+                                                     FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </Page>
